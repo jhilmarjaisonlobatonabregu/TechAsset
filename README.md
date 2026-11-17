@@ -92,15 +92,15 @@ dotnet test backend/TechAsset.sln
 
 > **Nota de Seguridad y Usabilidad (Heurística 8 de Nielsen):** Las credenciales de acceso se mantienen exclusivamente en este documento y en el informe técnico, sin exponer botones ni datos de demostración en la interfaz web de producción.
 
-| Rol | Correo | Contraseña | Permisos principales |
+| Actor / Rol | Usuario o Correo Admitido | Contraseña | Permisos principales |
 |---|---|---|---|
-| **Administrador** | `cmendoza@innovatech.pe` | `Admin2026!` | Gestión total de usuarios (único que deshabilita según `RN-09`), equipos, préstamos, reportes y dashboard. |
-| **Responsable de Tecnología** | `lquispe@innovatech.pe` | `Soporte2026!` | Registro/actualización de equipos, registro de préstamos (`RN-05`) y devoluciones (`RN-10`), reportes y dashboard. |
-| **Colaborador** | `atorres@innovatech.pe` | `Colab2026!` | Consulta de disponibilidad de equipos, solicitud de préstamos propios, historial personal y dashboard. |
+| **Administrador** | `admin` o `admin@innovatech.pe` o `cmendoza@innovatech.pe` | `Admin2026!` (o `Password123!`) | Gestión total de usuarios (único que deshabilita según `RN-09`), equipos, préstamos, reportes y dashboard. |
+| **Responsable de Tecnología** | `tecnologia` o `tecnologia@innovatech.pe` o `lquispe@innovatech.pe` | `Soporte2026!` (o `Password123!`) | Registro/actualización de equipos, registro de préstamos (`RN-05`) y devoluciones (`RN-10`), reportes y dashboard. |
+| **Colaborador** | `colaborador` o `colaborador@innovatech.pe` o `atorres@innovatech.pe` | `Colab2026!` (o `Password123!`) | Consulta de disponibilidad de equipos, solicitud de préstamos propios, historial personal y dashboard. |
 
 ### Características de la Pantalla de Inicio de Sesión (`/login`)
 - **Proporción 60/40:** Panel de marca izquierdo (60%, `lg:col-span-3`) con titular corporativo de alto impacto, párrafo descriptivo centrado verticalmente, degradado azul con overlay oscuro preparado para imagen de fondo (contraste WCAG AAA) y pie institucional con copyright; panel de formulario derecho (40%, `lg:col-span-2`, centrado a `max-w-[420px]`). En dispositivos móviles se oculta el panel izquierdo para máxima usabilidad.
-- **Validación con React Hook Form + Zod:** Formato de correo electrónico institucional estricto (no admite palabras sueltas como `"admin"`), contraseña obligatoria y mensajes claros.
+- **Validación flexible con React Hook Form + Zod:** Admite tanto el correo corporativo completo (`admin@innovatech.pe`, `cmendoza@innovatech.pe`) como el identificador directo del actor (`admin`, `tecnologia`, `colaborador`), resolviendo automáticamente el dominio y asignando los roles correspondientes.
 - **Control de visibilidad de clave:** Botón accesible mostrar/ocultar contraseña (`Eye` / `EyeOff`).
 - **Respuesta de seguridad unificada:** Mensaje genérico y seguro ante credenciales inválidas o usuarios deshabilitados (*"Credenciales de acceso incorrectas o usuario no habilitado."*).
 - **Accesibilidad y eficiencia:** Foco automático en el campo correo (`autoFocus`), soporte nativo para tecla `Enter`, estado de carga (`loading`) en el botón y contraste conforme a WCAG 2.1 AA.

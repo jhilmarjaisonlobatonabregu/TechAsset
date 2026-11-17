@@ -6,8 +6,15 @@ import { CATEGORIAS_EQUIPO, ESTADOS_EQUIPO, ROLES_USUARIO } from '../constants/c
 export const loginSchema = z.object({
   correo: z
     .string()
-    .min(1, 'El correo institucional es obligatorio.')
-    .email('Ingrese un correo válido (ej. usuario@innovatech.pe).'),
+    .trim()
+    .min(1, 'El correo institucional o usuario es obligatorio.')
+    .refine(
+      (val) => {
+        const v = val.trim();
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || /^[A-Za-z0-9_.-]{3,}$/.test(v);
+      },
+      'Ingrese un correo válido (ej. usuario@innovatech.pe) o identificador de usuario.',
+    ),
   password: z.string().min(1, 'La contraseña es obligatoria.'),
 });
 export type LoginFormValues = z.infer<typeof loginSchema>;
