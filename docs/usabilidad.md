@@ -126,8 +126,8 @@ flowchart LR
 | **H4** | **Consistencia y estándares** | Cumplimiento de convenciones web estándar: botones primarios en azul corporativo, acciones destructivas en rojo semántico e íconos universales (`Lucide Icons`). |
 | **H5** | **Prevención de errores** | En el modal de Nuevo Préstamo (`RF-09`), los equipos que no están `Disponibles` (`RN-01`, `RN-02`, `RN-03`) y los usuarios `Inactivos` (`RN-10`) se filtran o señalizan claramente para evitar selecciones inválidas. |
 | **H6** | **Reconocer antes que recordar** | Los filtros de `EquiposPage` y `ReportesPage` ofrecen listas desplegables con las 7 categorías oficiales y marcas registradas en lugar de exigir que el usuario escriba el nombre exacto. |
-| **H7** | **Flexibilidad y eficiencia de uso** | En la pantalla de Inicio de Sesión (`LoginPage`), se incluyen botones de **Acceso Rápido de Demostración** para los 3 roles (`Administrador`, `Responsable TI`, `Colaborador`) que agilizan las pruebas y la sustentación. |
-| **H8** | **Diseño estético y minimalista** | Uso de tarjetas limpias (`StatCard`) con espaciado generoso en Tailwind CSS, mostrando solo los atributos relevantes y evitando saturación visual. |
+| **H7** | **Flexibilidad y eficiencia de uso** | Formulario de autenticación con foco automático en el campo correo (`autoFocus`), alternador visual de visibilidad de contraseña (`Eye`/`EyeOff`), envío ágil mediante teclado (`Enter`) y navegación tabulada fluida. |
+| **H8** | **Diseño estético y minimalista** | Pantalla de inicio de sesión estructurada en proporción 60/40 (`lg:col-span-3` / `lg:col-span-2`), libre de elementos distractores o credenciales en la interfaz (reservadas al README técnico), con 3 puntos de valor bien definidos y tarjetas limpias (`StatCard`) con espaciado generoso en Tailwind CSS sin scroll en 768p y 1080p. |
 | **H9** | **Ayudar a reconocer, diagnosticar y recuperarse de errores** | Cuando el backend rechaza una operación (ej. `409 Conflict` por `RN-06` o `RN-07`), el `AlertBanner` explica en lenguaje claro la causa exacta y la acción alternativa recomendada (ej. *"Utilice el cambio de estado a Baja"*). |
 | **H10** | **Ayuda y documentación** | Textos guía en cada cabecera de página (`PageHeader`), leyendas de reglas de negocio visibles en los formularios y documentación completa en `/docs` y Swagger UI (`/swagger`). |
 
@@ -165,7 +165,7 @@ El sistema no depende exclusivamente del color para transmitir información: cad
 
 | Pantalla / Componente de TechAsset | ISO 9241-110 / 210 | Heurística de Nielsen | Regla de Shneiderman | Principio de Norman |
 | :--- | :--- | :--- | :--- | :--- |
-| **`LoginPage.tsx` (Botones Demo por Rol)** | Adecuación al aprendizaje | H7: Flexibilidad y eficiencia | Regla 2: Atajos para usuarios frecuentes | Reducción del Golfo de Ejecución |
+| **`LoginPage.tsx` (Proporción 60/40 y Formulario)** | Adecuación a la tarea y autodescripción | H8: Diseño estético y minimalista | Regla 5 y 8: Prevención de errores y reducción de carga cognitiva | Affordance de alternar clave (`Eye`), Signifiers y foco visible |
 | **`DashboardPage.tsx` (`StatCard` + KPIs)** | Autodescripción | H1: Visibilidad del estado del sistema | Regla 8: Reducir carga de memoria | Mapeo natural y Modelo conceptual |
 | **`UsuariosPage.tsx` (`ConfirmDialog` Baja)** | Controlabilidad | H5: Prevención de errores | Regla 6 y 7: Reversibilidad y Control | Restricción lógica (`RN-10`) |
 | **`EquiposPage.tsx` (`SearchFilterBar` RF-08)** | Adecuación a la tarea | H6: Reconocer antes que recordar | Regla 2: Filtrado instantáneo | Feedback inmediato |

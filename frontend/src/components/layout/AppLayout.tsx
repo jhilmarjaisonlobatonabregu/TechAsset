@@ -13,11 +13,10 @@ import {
   X,
 } from 'lucide-react';
 import React, { useState } from 'react';
-import { DEMO_USERS_FALLBACK } from '../../constants/catalogos';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import type { VistaNavegacion } from '../../types';
-import { StatusBadge, useToast } from '../ui';
+import { StatusBadge } from '../ui';
 
 export interface AppLayoutProps {
   vistaActual: VistaNavegacion;
@@ -70,30 +69,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   onCambiarVista,
   children,
 }) => {
-  const { usuario, esAdmin, puedeOperarInventario, cambiarActorDemo, cerrarSesion } = useAuth();
+  const { usuario, puedeOperarInventario, cerrarSesion } = useAuth();
   // RBAC: el Colaborador solo accede a dashboard, inventario (consulta) y sus préstamos
   const puedeVerModulo = (id: VistaNavegacion): boolean =>
     puedeOperarInventario || id === 'dashboard' || id === 'equipos' || id === 'prestamos';
   const { darkMode, toggleDarkMode } = useTheme();
-  const { showToast } = useToast();
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
-  const [cambiandoRol, setCambiandoRol] = useState(false);
-
-  const handleCambioRapidoActor = async (correoActor: string) => {
-    const actor = DEMO_USERS_FALLBACK.find((u) => u.correo === correoActor);
-    if (!actor || actor.correo === usuario?.correo) return;
-    setCambiandoRol(true);
-    try {
-      const nuevoUsuario = await cambiarActorDemo(actor);
-      showToast({
-        title: `Sesión cambiada a ${nuevoUsuario.rol}`,
-        description: `Operando como ${nuevoUsuario.nombreCompleto} (${nuevoUsuario.area}).`,
-        variant: 'info',
-      });
-    } finally {
-      setCambiandoRol(false);
-    }
-  };
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -239,33 +220,12 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
           </div>
 
           <div className="flex items-center gap-2.5">
-            {/* Conmutador rápido de Rol Demo para evaluar RBAC / RN-09 en 1 clic */}
-            <div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 md:flex dark:border-slate-800 dark:bg-slate-800/60">
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                Actor Demo:
+            {/* Información del usuario autenticado */}
+            <div className="hidden sm:flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 dark:border-slate-800 dark:bg-slate-800/60">
+              <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                {usuario?.nombreCompleto}
               </span>
-              <select
-                aria-label="Cambiar actor de demostración"
-                disabled={cambiandoRol}
-                value={usuario?.correo ?? ''}
-                onChange={(e) => void handleCambioRapidoActor(e.target.value)}
-                className="cursor-pointer rounded border-none bg-transparent text-xs font-semibold text-slate-800 focus:outline-none dark:text-slate-200"
-              >
-                {DEMO_USERS_FALLBACK.map((actor) => (
-                  <option
-                    key={actor.correo}
-                    value={actor.correo}
-                    className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100"
-                  >
-                    {actor.rol} — {actor.nombreCompleto}
-                  </option>
-                ))}
-              </select>
-              {esAdmin && (
-                <span className="rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-bold text-purple-700 dark:bg-purple-950 dark:text-purple-300">
-                  RN-09 Habilitado
-                </span>
-              )}
+              {usuario?.rol && <StatusBadge status={usuario.rol} />}
             </div>
 
             <button
