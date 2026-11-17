@@ -1,13 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   AlertCircle,
-  ArrowLeftRight,
-  BarChart3,
   Building2,
   Eye,
   EyeOff,
   KeyRound,
-  Laptop,
   LogIn,
   Mail,
   ShieldCheck,
@@ -54,23 +51,32 @@ export function LoginPage() {
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-5 bg-slate-50 dark:bg-slate-950 font-sans">
       {/* Panel izquierdo de marca e institucional — 60% en pantallas grandes (lg:col-span-3) */}
-      <aside className="relative hidden lg:col-span-3 lg:flex flex-col justify-between overflow-hidden bg-slate-900 p-10 xl:p-14 text-white select-none">
+      <aside className="relative hidden lg:col-span-3 lg:flex flex-col justify-between overflow-hidden bg-slate-950 p-10 xl:p-16 text-white select-none">
+        {/* Capa de imagen de fondo opcional (object-cover) */}
+        {/* Para habilitar una imagen de fondo institucional, descomentar: */}
+        {/* <img src="/images/login-bg.webp" alt="" className="absolute inset-0 h-full w-full object-cover object-center pointer-events-none" /> */}
+
+        {/* Degradado azul de fondo y capa oscura (overlay) para contraste accesible WCAG AAA */}
         <div
-          className="absolute inset-0 bg-gradient-to-br from-blue-700/40 via-slate-900 to-slate-950"
+          className="absolute inset-0 bg-gradient-to-br from-blue-950/90 via-slate-900/95 to-slate-950"
           aria-hidden="true"
         />
         <div
-          className="pointer-events-none absolute -top-24 -left-24 h-96 w-96 rounded-full bg-blue-500/15 blur-3xl"
+          className="absolute inset-0 bg-slate-950/50 backdrop-blur-[1px]"
           aria-hidden="true"
         />
         <div
-          className="pointer-events-none absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-emerald-500/10 blur-3xl"
+          className="pointer-events-none absolute -top-24 -left-24 h-[500px] w-[500px] rounded-full bg-blue-600/15 blur-3xl"
+          aria-hidden="true"
+        />
+        <div
+          className="pointer-events-none absolute -bottom-24 -right-24 h-[500px] w-[500px] rounded-full bg-indigo-600/10 blur-3xl"
           aria-hidden="true"
         />
 
-        {/* Encabezado del panel de marca */}
+        {/* Encabezado del panel de marca: Logo + TechAsset / Innovatech Solutions S.A.C. */}
         <div className="relative z-10 flex items-center gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-600/30">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-600/30">
             <Building2 className="h-6 w-6 text-white" />
           </div>
           <div>
@@ -79,62 +85,23 @@ export function LoginPage() {
           </div>
         </div>
 
-        {/* Mensaje central y 3 puntos de valor */}
-        <div className="relative z-10 my-auto py-8">
-          <h1 className="max-w-xl text-3xl xl:text-4xl leading-tight font-extrabold tracking-tight text-white">
+        {/* Titular y párrafo descriptivo — alineados verticalmente al centro con mayor jerarquía y espaciado */}
+        <div className="relative z-10 my-auto py-12 xl:py-16 max-w-xl">
+          <h1 className="text-4xl xl:text-5xl leading-[1.15] font-extrabold tracking-tight text-white drop-shadow-sm">
             Control inteligente de activos tecnológicos.
           </h1>
-          <p className="mt-4 max-w-lg text-sm xl:text-base leading-relaxed text-slate-300">
+          <p className="mt-6 text-base xl:text-lg leading-relaxed text-slate-200 font-normal">
             Plataforma institucional para el registro, asignación, devolución y seguimiento de
             equipamiento informático con trazabilidad patrimonial y disponibilidad en tiempo real.
           </p>
-
-          <div className="mt-8 space-y-3.5 max-w-lg">
-            <div className="flex items-start gap-3.5 rounded-xl border border-white/10 bg-white/5 p-3.5 backdrop-blur-sm">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-600/30 text-blue-300">
-                <Laptop className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-white">Inventario en tiempo real</h3>
-                <p className="mt-0.5 text-xs text-slate-300 leading-relaxed">
-                  Catálogo centralizado de activos con código patrimonial único, categorización,
-                  marcas y estados operativos actualizados.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3.5 rounded-xl border border-white/10 bg-white/5 p-3.5 backdrop-blur-sm">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600/30 text-emerald-300">
-                <ArrowLeftRight className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-white">Control de préstamos</h3>
-                <p className="mt-0.5 text-xs text-slate-300 leading-relaxed">
-                  Asignaciones y devoluciones auditadas con validación automática de reglas de
-                  negocio, responsable obligatorio y prevención de solapamientos.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3.5 rounded-xl border border-white/10 bg-white/5 p-3.5 backdrop-blur-sm">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-600/30 text-purple-300">
-                <BarChart3 className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-white">Reportes e indicadores</h3>
-                <p className="mt-0.5 text-xs text-slate-300 leading-relaxed">
-                  Dashboard gerencial con KPIs dinámicos, métricas de consumo por área funcional,
-                  ranking de equipos y bitácora de movimientos.
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
 
-        {/* Pie institucional izquierdo */}
-        <p className="relative z-10 text-xs text-slate-400">
-          Innovatech Solutions S.A.C. © 2026 · Sistema Institucional de Gestión Patrimonial
-        </p>
+        {/* Pie con el copyright abajo */}
+        <div className="relative z-10">
+          <p className="text-xs text-slate-400">
+            Innovatech Solutions S.A.C. © 2026 · Sistema Institucional de Gestión Patrimonial
+          </p>
+        </div>
       </aside>
 
       {/* Panel derecho del formulario — 40% en pantallas grandes (lg:col-span-2) */}

@@ -99,7 +99,7 @@ dotnet test backend/TechAsset.sln
 | **Colaborador** | `atorres@innovatech.pe` | `Colab2026!` | Consulta de disponibilidad de equipos, solicitud de préstamos propios, historial personal y dashboard. |
 
 ### Características de la Pantalla de Inicio de Sesión (`/login`)
-- **Proporción 60/40:** Panel de marca izquierdo (60%, `lg:col-span-3`) con titular corporativo y 3 puntos de valor (Inventario en tiempo real, Control de préstamos y Reportes e indicadores); panel de formulario derecho (40%, `lg:col-span-2`, centrado a `max-w-[420px]`). En dispositivos móviles se oculta el panel izquierdo para máxima usabilidad.
+- **Proporción 60/40:** Panel de marca izquierdo (60%, `lg:col-span-3`) con titular corporativo de alto impacto, párrafo descriptivo centrado verticalmente, degradado azul con overlay oscuro preparado para imagen de fondo (contraste WCAG AAA) y pie institucional con copyright; panel de formulario derecho (40%, `lg:col-span-2`, centrado a `max-w-[420px]`). En dispositivos móviles se oculta el panel izquierdo para máxima usabilidad.
 - **Validación con React Hook Form + Zod:** Formato de correo electrónico institucional estricto (no admite palabras sueltas como `"admin"`), contraseña obligatoria y mensajes claros.
 - **Control de visibilidad de clave:** Botón accesible mostrar/ocultar contraseña (`Eye` / `EyeOff`).
 - **Respuesta de seguridad unificada:** Mensaje genérico y seguro ante credenciales inválidas o usuarios deshabilitados (*"Credenciales de acceso incorrectas o usuario no habilitado."*).
