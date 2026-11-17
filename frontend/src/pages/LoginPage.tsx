@@ -136,17 +136,17 @@ export function LoginPage() {
             )}
 
             <FormField
-              label="Correo institucional o usuario"
+              label="Correo institucional"
               htmlFor="correo"
               required
               error={errors.correo?.message}
             >
               <Input
                 id="correo"
-                type="text"
+                type="email"
                 autoFocus
                 autoComplete="username"
-                placeholder="usuario@innovatech.pe o admin"
+                placeholder="usuario@innovatech.pe"
                 prefixIcon={<Mail className="h-4 w-4" />}
                 hasError={Boolean(errors.correo)}
                 {...register('correo')}

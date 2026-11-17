@@ -7,14 +7,8 @@ export const loginSchema = z.object({
   correo: z
     .string()
     .trim()
-    .min(1, 'El correo institucional o usuario es obligatorio.')
-    .refine(
-      (val) => {
-        const v = val.trim();
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || /^[A-Za-z0-9_.-]{3,}$/.test(v);
-      },
-      'Ingrese un correo válido (ej. usuario@innovatech.pe) o identificador de usuario.',
-    ),
+    .min(1, 'El correo institucional es obligatorio.')
+    .email('Ingrese un correo institucional válido (ej. usuario@innovatech.pe).'),
   password: z.string().min(1, 'La contraseña es obligatoria.'),
 });
 export type LoginFormValues = z.infer<typeof loginSchema>;
