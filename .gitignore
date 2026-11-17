@@ -1,0 +1,35 @@
+# .NET / Backend
+bin/
+obj/
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+TestResults/
+
+# Frontend / Node
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+dist-ssr/
+*.local
+.vite/
+
+# Environment
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+*.log
