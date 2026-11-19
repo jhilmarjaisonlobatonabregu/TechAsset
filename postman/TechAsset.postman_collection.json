@@ -60,6 +60,10 @@
     {
       "key": "prestamoActivoId",
       "value": ""
+    },
+    {
+      "key": "solicitudPendienteId",
+      "value": ""
     }
   ],
   "item": [
@@ -199,39 +203,6 @@
                   "pm.collectionVariables.set('token', j.token);",
                   "pm.collectionVariables.set('colaboradorId', j.usuario.id);",
                   "pm.test('Devuelve rol', function(){ pm.expect(j.usuario.rol).to.be.a('string'); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Usuarios demo (acceso rápido)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/auth/demo-users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "demo-users"
-              ],
-              "query": []
-            },
-            "description": "",
-            "auth": {
-              "type": "noauth"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Código HTTP 200', function () { pm.response.to.have.status(200); });"
                 ]
               }
             }
@@ -1274,6 +1245,52 @@
           ]
         },
         {
+          "name": "Login Colaborador (previo)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"atorres@innovatech.pe\",\n  \"password\": \"Colab2026!\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('token', j.token);",
+                  "pm.collectionVariables.set('colaboradorId', j.usuario.id);",
+                  "pm.test('Devuelve rol', function(){ pm.expect(j.usuario.rol).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Solicitar préstamo como Colaborador (Pendiente)",
           "request": {
             "method": "POST",
@@ -1296,14 +1313,14 @@
             "description": "El Colaborador solicita un préstamo y se registra en estado Pendiente sin cambiar el estado del equipo.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"equipoId\": \"{{equipoDisponibleId}}\",\n  \"usuarioId\": \"{{colaboradorId}}\",\n  \"fechaPrestamo\": \"2026-04-01\",\n  \"fechaDevolucion\": \"2026-04-08\",\n  \"observacion\": \"Solicitud de equipo por colaborador pendiente de aprobación\"\n}"
+              "raw": "{\n  \"equipoId\": \"{{equipoId}}\",\n  \"usuarioId\": \"{{colaboradorId}}\",\n  \"fechaPrestamo\": \"2026-04-01\",\n  \"fechaDevolucion\": \"2026-04-08\",\n  \"observacion\": \"Solicitud de equipo por colaborador pendiente de aprobación\"\n}"
             },
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{tokenColaborador}}",
+                  "value": "{{token}}",
                   "type": "string"
                 }
               ]
@@ -1364,6 +1381,52 @@
                 "exec": [
                   "pm.test('Código HTTP 200', function () { pm.response.to.have.status(200); });",
                   "pm.test('Todas las solicitudes están Pendientes', function(){ pm.response.json().forEach(p => pm.expect(p.estadoPrestamo).to.eql('Pendiente')); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Responsable (previo) para aprobar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"lquispe@innovatech.pe\",\n  \"password\": \"Soporte2026!\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('token', j.token);",
+                  "pm.collectionVariables.set('responsableId', j.usuario.id);",
+                  "pm.test('Devuelve rol', function(){ pm.expect(j.usuario.rol).to.be.a('string'); });"
                 ]
               }
             }
@@ -2172,7 +2235,7 @@
             "description": "Caso negativo de la regla RN-07",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"codigoPatrimonial\": \"INV-LAP-0001\",\n  \"nombre\": \"Duplicado\",\n  \"categoria\": \"Laptops\",\n  \"marca\": \"Dell\"\n}"
+              "raw": "{\n  \"codigoPatrimonial\": \"INV-LAP-001\",\n  \"nombre\": \"Duplicado\",\n  \"categoria\": \"Laptops\",\n  \"marca\": \"Dell\"\n}"
             },
             "auth": {
               "type": "bearer",
@@ -2193,6 +2256,52 @@
                 "exec": [
                   "pm.test('Código HTTP 409', function () { pm.response.to.have.status(409); });",
                   "pm.test('Código de regla RN-07', function(){ pm.expect(pm.response.json().codigo).to.eql('RN-07'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Administrador para RN-08",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"correo\": \"cmendoza@innovatech.pe\",\n  \"password\": \"Admin2026!\"\n}"
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('token', j.token);",
+                  "pm.collectionVariables.set('adminId', j.usuario.id);",
+                  "pm.test('Devuelve rol', function(){ pm.expect(j.usuario.rol).to.be.a('string'); });"
                 ]
               }
             }
