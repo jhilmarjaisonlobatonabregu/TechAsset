@@ -54,8 +54,16 @@ public static class EstadosEquipo
 
 public static class EstadosPrestamo
 {
+    public const string Pendiente = "Pendiente";
     public const string Activo = "Activo";
     public const string Devuelto = "Devuelto";
+
+    public static readonly IReadOnlyList<string> Todos = new[]
+    {
+        Pendiente,
+        Activo,
+        Devuelto
+    };
 }
 
 public static class TiposMovimiento

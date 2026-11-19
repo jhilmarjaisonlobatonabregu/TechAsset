@@ -102,14 +102,19 @@ CREATE TABLE prestamos (
     estado_prestamo         VARCHAR(30) NOT NULL DEFAULT 'Activo',
     usuario_id              UUID        NOT NULL,
     equipo_id               UUID        NOT NULL,
-    responsable_id          UUID        NOT NULL,
+    responsable_id          UUID        NULL,
 
     -- RN-04: La fecha estimada de devolución debe ser estrictamente posterior a la fecha de préstamo
     CONSTRAINT ck_prestamos_fechas_coherentes CHECK (fecha_devolucion > fecha_prestamo),
 
-    -- Estados del ciclo de vida del préstamo
+    -- Estados del ciclo de vida del préstamo (incluye solicitudes Pendientes de aprobación)
     CONSTRAINT ck_prestamos_estado CHECK (
-        estado_prestamo IN ('Activo', 'Devuelto')
+        estado_prestamo IN ('Pendiente', 'Activo', 'Devuelto')
+    ),
+
+    -- RN-05: Todo préstamo aprobado (Activo o Devuelto) debe tener un usuario responsable asignado
+    CONSTRAINT ck_prestamos_responsable_activo CHECK (
+        estado_prestamo = 'Pendiente' OR responsable_id IS NOT NULL
     ),
 
     -- Relaciones de integridad referencial (RN-06 impide eliminación física de equipos con historial)
@@ -117,7 +122,6 @@ CREATE TABLE prestamos (
         FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE RESTRICT,
     CONSTRAINT fk_prestamos_equipo
         FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE RESTRICT,
-    -- RN-05: Todo préstamo debe tener un usuario responsable asignado
     CONSTRAINT fk_prestamos_responsable
         FOREIGN KEY (responsable_id) REFERENCES usuarios(id) ON DELETE RESTRICT
 );
@@ -327,7 +331,18 @@ INSERT INTO prestamos (
 ('33333333-3333-4333-8333-333333333318', '2026-03-09', '2026-04-20', NULL,
  'Ciclo de demos ejecutivas para comité de transformación digital',
  NULL, 'Activo',
- '11111111-1111-4111-8111-111111111105', '22222222-2222-4222-8222-222222222221', '11111111-1111-4111-8111-111111111103');
+ '11111111-1111-4111-8111-111111111105', '22222222-2222-4222-8222-222222222221', '11111111-1111-4111-8111-111111111103'),
+
+-- 2 Solicitudes PENDIENTES de aprobación (equipos permanecen en estado 'Disponible', responsable_id NULL)
+('33333333-3333-4333-8333-333333333319', '2026-03-12', '2026-03-26', NULL,
+ 'Solicitud de laptop adicional para pruebas de carga y estrés del módulo de préstamos',
+ NULL, 'Pendiente',
+ '11111111-1111-4111-8111-111111111104', '22222222-2222-4222-8222-222222222203', NULL),
+
+('33333333-3333-4333-8333-333333333320', '2026-03-13', '2026-03-27', NULL,
+ 'Solicitud de equipo portátil para validación funcional en entorno de preproducción',
+ NULL, 'Pendiente',
+ '11111111-1111-4111-8111-111111111107', '22222222-2222-4222-8222-222222222205', NULL);
 
 -- =============================================================================
 -- 8. DATOS SEMILLA: 25 MOVIMIENTOS DE INVENTARIO (Bitácora de Auditoría RF-17)

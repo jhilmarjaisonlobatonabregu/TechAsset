@@ -72,7 +72,7 @@ export function resolveStatusVariant(status: string): BadgeVariant {
   if (normalized === 'prestado' || normalized === 'activo' || normalized === 'prestamo') {
     return 'blue';
   }
-  if (normalized === 'mantenimiento' || normalized === 'cambioestado') {
+  if (normalized === 'mantenimiento' || normalized === 'cambioestado' || normalized === 'pendiente') {
     return 'amber';
   }
   if (

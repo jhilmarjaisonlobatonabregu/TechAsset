@@ -172,11 +172,23 @@ public class PrestamosController : ApiControllerBase
     [HttpPost]
     public async Task<ActionResult<PrestamoDto>> Registrar([FromBody] CrearPrestamoDto dto, CancellationToken ct)
     {
-        // El colaborador solicita préstamos únicamente a su nombre
-        if (EsColaborador && ActorId.HasValue) dto.UsuarioId = ActorId.Value;
+        // El colaborador solicita préstamos únicamente a su nombre (queda en estado Pendiente)
+        if (EsColaborador && ActorId.HasValue)
+        {
+            dto.UsuarioId = ActorId.Value;
+            dto.ResponsableId = null;
+        }
         await ValidarAsync(_crearValidator, dto, ct);
-        var creado = await _prestamos.RegistrarPrestamoAsync(dto, ct);
+        var creado = await _prestamos.RegistrarPrestamoAsync(dto, ActorRol, ct);
         return CreatedAtAction(nameof(Listar), new { id = creado.Id }, creado);
+    }
+
+    /// <summary>Aprobar solicitud de préstamo pendiente (solo Administrador y Responsable de Tecnología).</summary>
+    [HttpPatch("{id:guid}/aprobar"), Authorize(Roles = RolesGestion)]
+    public async Task<ActionResult<PrestamoDto>> Aprobar(Guid id, CancellationToken ct)
+    {
+        if (ActorId is null) throw new ReglaNegocioException("AUTH-401", "Sesión no válida.", 401);
+        return Ok(await _prestamos.AprobarPrestamoAsync(id, ActorId.Value, ActorRol, ct));
     }
 
     [HttpPost("{id:guid}/devolucion"), HttpPatch("{id:guid}/devolucion"), Authorize(Roles = RolesGestion)]

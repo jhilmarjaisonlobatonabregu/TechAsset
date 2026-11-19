@@ -10,7 +10,7 @@ import { prestamosService } from '../../services/prestamosService';
 import { usuariosService } from '../../services/usuariosService';
 import type { EquipoDto, UsuarioDto } from '../../types';
 import { mensajeError, notificarError } from '../../utils/errores';
-import { prestamoSchema, type PrestamoFormValues } from '../../utils/esquemas';
+import { crearPrestamoSchema, type PrestamoFormValues } from '../../utils/esquemas';
 import { obtenerFechaInputHoy } from '../../utils/formatters';
 
 export interface PrestamoFormModalProps {
@@ -19,7 +19,7 @@ export interface PrestamoFormModalProps {
   onGuardado: () => void;
 }
 
-/** RF-09: registrar préstamo. Muestra advertencias de RN-01/02/03 y deja que el backend siempre valide. */
+/** RF-09: registrar o solicitar préstamo. Muestra advertencias de RN-01/02/03 y deja que el backend siempre valide. */
 export function PrestamoFormModal({ open, onClose, onGuardado }: PrestamoFormModalProps) {
   const { usuario, puedeOperarInventario } = useAuth();
   const { showToast } = useToast();
@@ -32,7 +32,11 @@ export function PrestamoFormModal({ open, onClose, onGuardado }: PrestamoFormMod
     [],
     [open, puedeOperarInventario],
   );
-  const { datos: responsables } = useCarga<UsuarioDto[]>(() => (open ? usuariosService.listarResponsables() : Promise.resolve([])), [], [open]);
+  const { datos: responsables } = useCarga<UsuarioDto[]>(
+    () => (open && puedeOperarInventario ? usuariosService.listarResponsables() : Promise.resolve([])),
+    [],
+    [open, puedeOperarInventario],
+  );
 
   const valoresIniciales = (): PrestamoFormValues => ({
     equipoId: '',
@@ -49,7 +53,10 @@ export function PrestamoFormModal({ open, onClose, onGuardado }: PrestamoFormMod
     reset,
     watch,
     formState: { errors, isSubmitting },
-  } = useForm<PrestamoFormValues>({ resolver: zodResolver(prestamoSchema), defaultValues: valoresIniciales() });
+  } = useForm<PrestamoFormValues>({
+    resolver: zodResolver(crearPrestamoSchema(puedeOperarInventario)),
+    defaultValues: valoresIniciales(),
+  });
 
   useEffect(() => {
     if (open) {
@@ -74,12 +81,16 @@ export function PrestamoFormModal({ open, onClose, onGuardado }: PrestamoFormMod
     setErrorServidor(null);
     try {
       await prestamosService.registrarPrestamo(valores);
-      showToast({ title: 'Préstamo registrado', description: 'El equipo quedó asignado y su estado cambió a «Prestado».', variant: 'success' });
+      if (puedeOperarInventario) {
+        showToast({ title: 'Préstamo registrado', description: 'El equipo quedó asignado y su estado cambió a «Prestado».', variant: 'success' });
+      } else {
+        showToast({ title: 'Solicitud registrada', description: 'La solicitud de préstamo quedó pendiente de aprobación.', variant: 'success' });
+      }
       onGuardado();
       onClose();
     } catch (err: unknown) {
       setErrorServidor(mensajeError(err));
-      notificarError(showToast, err, 'Préstamo rechazado');
+      notificarError(showToast, err, puedeOperarInventario ? 'Préstamo rechazado' : 'Solicitud rechazada');
     }
   });
 
@@ -87,13 +98,13 @@ export function PrestamoFormModal({ open, onClose, onGuardado }: PrestamoFormMod
     <Modal
       open={open}
       onClose={onClose}
-      title="Registrar préstamo"
-      subtitle="RF-09 · Reglas RN-01 a RN-05 validadas en servidor"
+      title={puedeOperarInventario ? 'Registrar préstamo' : 'Solicitar préstamo'}
+      subtitle={puedeOperarInventario ? 'RF-09 · Reglas RN-01 a RN-05 validadas en servidor' : 'Solicitud sujeta a aprobación del Responsable de Tecnología'}
       size="lg"
       footer={
         <>
           <Button variant="ghost" onClick={onClose} type="button">Cancelar</Button>
-          <Button type="submit" form="form-prestamo" loading={isSubmitting}>Registrar préstamo</Button>
+          <Button type="submit" form="form-prestamo" loading={isSubmitting}>{puedeOperarInventario ? 'Registrar préstamo' : 'Solicitar préstamo'}</Button>
         </>
       }
     >
@@ -129,9 +140,16 @@ export function PrestamoFormModal({ open, onClose, onGuardado }: PrestamoFormMod
             <input type="hidden" {...register('usuarioId')} />
           </FormField>
         )}
-        <FormField label="Responsable de Tecnología" htmlFor="pr-responsable" required ruleBadge="RN-05" error={errors.responsableId?.message}>
-          <Select id="pr-responsable" placeholder="Seleccione…" hasError={Boolean(errors.responsableId)} options={responsables.map((u) => ({ value: u.id, label: u.nombreCompleto }))} {...register('responsableId')} />
-        </FormField>
+        {puedeOperarInventario ? (
+          <FormField label="Responsable de Tecnología" htmlFor="pr-responsable" required ruleBadge="RN-05" error={errors.responsableId?.message}>
+            <Select id="pr-responsable" placeholder="Seleccione…" hasError={Boolean(errors.responsableId)} options={responsables.map((u) => ({ value: u.id, label: u.nombreCompleto }))} {...register('responsableId')} />
+          </FormField>
+        ) : (
+          <FormField label="Responsable de Tecnología" htmlFor="pr-responsable-ro" ruleBadge="RN-05" helperText="Se asignará automáticamente al aprobar la solicitud.">
+            <Input id="pr-responsable-ro" readOnly value="Pendiente de aprobación" />
+            <input type="hidden" {...register('responsableId')} />
+          </FormField>
+        )}
         <FormField label="Fecha de préstamo" htmlFor="pr-fp" required error={errors.fechaPrestamo?.message}>
           <DatePicker id="pr-fp" hasError={Boolean(errors.fechaPrestamo)} {...register('fechaPrestamo')} />
         </FormField>

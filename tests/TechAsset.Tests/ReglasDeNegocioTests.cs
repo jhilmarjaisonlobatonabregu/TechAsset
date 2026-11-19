@@ -186,6 +186,115 @@ public class ReglasPrestamoTests : PruebaBase
         Assert.NotEmpty(porArea);
         Assert.All(porArea, p => Assert.Equal("Desarrollo de Software", p.UsuarioArea));
     }
+
+    [Fact(DisplayName = "Solicitud Colaborador: crea el préstamo en estado Pendiente sin cambiar el equipo ni exigir responsable")]
+    public async Task SolicitudColaborador_QuedaPendienteYEquipoDisponible()
+    {
+        var servicio = new PrestamoService(Db);
+        var equipoId = await ObtenerEquipoIdAsync(EstadosEquipo.Disponible);
+        var colaboradorId = await ObtenerColaboradorIdAsync();
+        var movimientosAntes = await Db.MovimientosInventario.CountAsync();
+
+        var creado = await servicio.RegistrarPrestamoAsync(new CrearPrestamoDto
+        {
+            EquipoId = equipoId,
+            UsuarioId = colaboradorId,
+            ResponsableId = null,
+            FechaPrestamo = DateOnly.FromDateTime(DateTime.Today),
+            FechaDevolucion = DateOnly.FromDateTime(DateTime.Today.AddDays(5)),
+            Observacion = "Solicitud de colaborador para trabajo remoto"
+        }, Roles.Colaborador);
+
+        Assert.Equal(EstadosPrestamo.Pendiente, creado.EstadoPrestamo);
+        Assert.Null(creado.ResponsableId);
+        Assert.Equal(EstadosEquipo.Disponible, (await Db.Equipos.FindAsync(equipoId))!.Estado);
+        Assert.Equal(movimientosAntes, await Db.MovimientosInventario.CountAsync());
+    }
+
+    [Fact(DisplayName = "Aprobación: pasa el préstamo Pendiente a Activo, marca el equipo Prestado, asigna responsable (RN-05) y registra movimiento")]
+    public async Task AprobarPrestamo_PasaAActivoYMarcaEquipoPrestado()
+    {
+        var servicio = new PrestamoService(Db);
+        var equipoId = await ObtenerEquipoIdAsync(EstadosEquipo.Disponible);
+        var colaboradorId = await ObtenerColaboradorIdAsync();
+        var responsableId = await ObtenerResponsableIdAsync();
+
+        var solicitud = await servicio.RegistrarPrestamoAsync(new CrearPrestamoDto
+        {
+            EquipoId = equipoId,
+            UsuarioId = colaboradorId,
+            ResponsableId = null,
+            FechaPrestamo = DateOnly.FromDateTime(DateTime.Today),
+            FechaDevolucion = DateOnly.FromDateTime(DateTime.Today.AddDays(5)),
+            Observacion = "Solicitud pendiente para aprobar"
+        }, Roles.Colaborador);
+
+        var movimientosAntes = await Db.MovimientosInventario.CountAsync();
+        var aprobado = await servicio.AprobarPrestamoAsync(solicitud.Id, responsableId, Roles.ResponsableTecnologia);
+
+        Assert.Equal(EstadosPrestamo.Activo, aprobado.EstadoPrestamo);
+        Assert.Equal(responsableId, aprobado.ResponsableId);
+        Assert.Equal(EstadosEquipo.Prestado, (await Db.Equipos.FindAsync(equipoId))!.Estado);
+        Assert.Equal(movimientosAntes + 1, await Db.MovimientosInventario.CountAsync());
+    }
+
+    [Fact(DisplayName = "Aprobación: no se puede aprobar un préstamo que no esté en estado Pendiente (409)")]
+    public async Task AprobarPrestamo_NoPendienteSeRechaza()
+    {
+        var servicio = new PrestamoService(Db);
+        var prestamoActivo = await Db.Prestamos.FirstAsync(p => p.EstadoPrestamo == EstadosPrestamo.Activo);
+        var responsableId = await ObtenerResponsableIdAsync();
+
+        var ex = await EsperarReglaAsync(() => servicio.AprobarPrestamoAsync(prestamoActivo.Id, responsableId, Roles.ResponsableTecnologia));
+        Assert.Equal("VAL-APROBACION", ex.Codigo);
+        Assert.Equal(409, ex.StatusCode);
+    }
+
+    [Fact(DisplayName = "Aprobación: no se aprueba si el equipo pasó a Mantenimiento, Baja o Prestado mientras esperaba")]
+    public async Task AprobarPrestamo_RevalidaEstadoEquipoAntesDeAprobar()
+    {
+        var servicio = new PrestamoService(Db);
+        var equipoId = await ObtenerEquipoIdAsync(EstadosEquipo.Disponible);
+        var colaboradorId = await ObtenerColaboradorIdAsync();
+        var responsableId = await ObtenerResponsableIdAsync();
+
+        var solicitud = await servicio.RegistrarPrestamoAsync(new CrearPrestamoDto
+        {
+            EquipoId = equipoId,
+            UsuarioId = colaboradorId,
+            FechaPrestamo = DateOnly.FromDateTime(DateTime.Today),
+            FechaDevolucion = DateOnly.FromDateTime(DateTime.Today.AddDays(5)),
+            Observacion = "Solicitud cuyo equipo cambiará de estado"
+        }, Roles.Colaborador);
+
+        var equipo = (await Db.Equipos.FindAsync(equipoId))!;
+
+        equipo.Estado = EstadosEquipo.Mantenimiento;
+        await Db.SaveChangesAsync();
+        var exMant = await EsperarReglaAsync(() => servicio.AprobarPrestamoAsync(solicitud.Id, responsableId, Roles.ResponsableTecnologia));
+        Assert.Equal("RN-02", exMant.Codigo);
+
+        equipo.Estado = EstadosEquipo.Baja;
+        await Db.SaveChangesAsync();
+        var exBaja = await EsperarReglaAsync(() => servicio.AprobarPrestamoAsync(solicitud.Id, responsableId, Roles.ResponsableTecnologia));
+        Assert.Equal("RN-03", exBaja.Codigo);
+
+        equipo.Estado = EstadosEquipo.Prestado;
+        await Db.SaveChangesAsync();
+        var exPrest = await EsperarReglaAsync(() => servicio.AprobarPrestamoAsync(solicitud.Id, responsableId, Roles.ResponsableTecnologia));
+        Assert.Equal("RN-01", exPrest.Codigo);
+    }
+
+    [Fact(DisplayName = "Aprobación: un Colaborador no puede aprobar solicitudes de préstamo (403)")]
+    public async Task AprobarPrestamo_ColaboradorNoPuedeAprobar()
+    {
+        var servicio = new PrestamoService(Db);
+        var solicitud = await Db.Prestamos.FirstAsync(p => p.EstadoPrestamo == EstadosPrestamo.Pendiente);
+        var colaboradorId = await ObtenerColaboradorIdAsync();
+
+        var ex = await EsperarReglaAsync(() => servicio.AprobarPrestamoAsync(solicitud.Id, colaboradorId, Roles.Colaborador));
+        Assert.Equal(403, ex.StatusCode);
+    }
 }
 
 public class ReglasEquipoUsuarioTests : PruebaBase
@@ -309,7 +418,7 @@ public class ReportesYAutenticacionTests : PruebaBase
         var d = await new ReporteService(Db).ObtenerDashboardAsync();
         Assert.Equal(await Db.Equipos.CountAsync(), d.TotalEquipos);
         Assert.Equal(d.TotalEquipos, d.EquiposDisponibles + d.EquiposPrestados + d.EquiposEnMantenimiento + d.EquiposDeBaja);
-        Assert.Equal(await Db.Prestamos.CountAsync(), d.TotalPrestamos);
+        Assert.Equal(await Db.Prestamos.CountAsync(p => p.EstadoPrestamo != EstadosPrestamo.Pendiente), d.TotalPrestamos);
         Assert.True(d.TotalEquipos >= 20);
         Assert.True(d.TotalPrestamos >= 15);
     }

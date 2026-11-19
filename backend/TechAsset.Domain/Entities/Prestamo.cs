@@ -19,7 +19,7 @@ public class Prestamo
     public Guid EquipoId { get; set; }
     public Equipo? Equipo { get; set; }
 
-    public Guid ResponsableId { get; set; }
+    public Guid? ResponsableId { get; set; }
     public Usuario? Responsable { get; set; }
 
     public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
@@ -80,8 +80,85 @@ public class Prestamo
         };
     }
 
+    public static Prestamo CrearSolicitud(
+        Guid equipoId,
+        Guid usuarioId,
+        DateOnly fechaPrestamo,
+        DateOnly fechaDevolucion,
+        string? observacion)
+    {
+        if (usuarioId == Guid.Empty)
+        {
+            throw new ReglaNegocioException(
+                "VAL-USUARIO",
+                "Debe seleccionar un colaborador válido para la solicitud de préstamo.",
+                400);
+        }
+
+        if (equipoId == Guid.Empty)
+        {
+            throw new ReglaNegocioException(
+                "VAL-EQUIPO",
+                "Debe seleccionar un equipo tecnológico para la solicitud de préstamo.",
+                400);
+        }
+
+        if (fechaDevolucion <= fechaPrestamo)
+        {
+            throw new ReglaNegocioException(
+                "RN-04",
+                "RN-04: La fecha de devolución debe ser posterior a la fecha de préstamo.",
+                400);
+        }
+
+        return new Prestamo
+        {
+            Id = Guid.NewGuid(),
+            EquipoId = equipoId,
+            UsuarioId = usuarioId,
+            ResponsableId = null,
+            FechaPrestamo = fechaPrestamo,
+            FechaDevolucion = fechaDevolucion,
+            Observacion = string.IsNullOrWhiteSpace(observacion)
+                ? "Solicitud de préstamo pendiente de aprobación."
+                : observacion.Trim(),
+            EstadoPrestamo = EstadosPrestamo.Pendiente,
+            FechaRegistro = DateTime.UtcNow
+        };
+    }
+
+    public void Aprobar(Guid responsableId)
+    {
+        if (!string.Equals(EstadoPrestamo, EstadosPrestamo.Pendiente, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ReglaNegocioException(
+                "VAL-APROBACION",
+                "Solo se puede aprobar un préstamo que se encuentre en estado 'Pendiente'.",
+                409);
+        }
+
+        if (responsableId == Guid.Empty)
+        {
+            throw new ReglaNegocioException(
+                "RN-05",
+                "RN-05: Todo préstamo debe tener un usuario responsable registrado.",
+                400);
+        }
+
+        ResponsableId = responsableId;
+        EstadoPrestamo = EstadosPrestamo.Activo;
+    }
+
     public void RegistrarDevolucion(string? observacionDevolucion, DateOnly? fechaDevolucionReal = null)
     {
+        if (string.Equals(EstadoPrestamo, EstadosPrestamo.Pendiente, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ReglaNegocioException(
+                "VAL-DEVOLUCION",
+                "No se puede registrar la devolución de una solicitud en estado 'Pendiente'.",
+                409);
+        }
+
         if (string.Equals(EstadoPrestamo, EstadosPrestamo.Devuelto, StringComparison.OrdinalIgnoreCase))
         {
             throw new ReglaNegocioException(

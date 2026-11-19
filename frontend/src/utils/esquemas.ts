@@ -52,19 +52,24 @@ export const cambioEstadoSchema = z.object({
 });
 export type CambioEstadoFormValues = z.infer<typeof cambioEstadoSchema>;
 
-export const prestamoSchema = z
-  .object({
-    equipoId: z.string().min(1, 'Seleccione el equipo a prestar.'),
-    usuarioId: z.string().min(1, 'Seleccione el colaborador receptor.'),
-    responsableId: z.string().min(1, 'RN-05: todo préstamo debe registrar un responsable.'),
-    fechaPrestamo: z.string().min(1, 'La fecha de préstamo es obligatoria.'),
-    fechaDevolucion: z.string().min(1, 'La fecha de devolución es obligatoria.'),
-    observacion: z.string().trim().min(5, 'Indique el motivo o uso del equipo (mínimo 5 caracteres).').max(500, 'Máximo 500 caracteres.'),
-  })
-  .refine((v) => !v.fechaPrestamo || !v.fechaDevolucion || v.fechaDevolucion > v.fechaPrestamo, {
-    path: ['fechaDevolucion'],
-    message: 'RN-04: la fecha de devolución debe ser posterior a la fecha de préstamo.',
-  });
+export const crearPrestamoSchema = (esGestion: boolean) =>
+  z
+    .object({
+      equipoId: z.string().min(1, 'Seleccione el equipo a prestar.'),
+      usuarioId: z.string().min(1, 'Seleccione el colaborador receptor.'),
+      responsableId: esGestion
+        ? z.string().min(1, 'RN-05: todo préstamo debe registrar un responsable.')
+        : z.string(),
+      fechaPrestamo: z.string().min(1, 'La fecha de préstamo es obligatoria.'),
+      fechaDevolucion: z.string().min(1, 'La fecha de devolución es obligatoria.'),
+      observacion: z.string().trim().min(5, 'Indique el motivo o uso del equipo (mínimo 5 caracteres).').max(500, 'Máximo 500 caracteres.'),
+    })
+    .refine((v) => !v.fechaPrestamo || !v.fechaDevolucion || v.fechaDevolucion > v.fechaPrestamo, {
+      path: ['fechaDevolucion'],
+      message: 'RN-04: la fecha de devolución debe ser posterior a la fecha de préstamo.',
+    });
+
+export const prestamoSchema = crearPrestamoSchema(true);
 export type PrestamoFormValues = z.infer<typeof prestamoSchema>;
 
 export const devolucionSchema = (fechaPrestamo: string) =>

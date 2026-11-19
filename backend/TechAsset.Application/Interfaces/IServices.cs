@@ -54,7 +54,8 @@ public interface IPrestamoService
 
     Task<IReadOnlyList<PrestamoDto>> ListarActivosAsync(CancellationToken ct = default);
     Task<PrestamoDto> ObtenerPorIdAsync(Guid id, CancellationToken ct = default);
-    Task<PrestamoDto> RegistrarPrestamoAsync(CrearPrestamoDto dto, CancellationToken ct = default);
+    Task<PrestamoDto> RegistrarPrestamoAsync(CrearPrestamoDto dto, string? rolActor = null, CancellationToken ct = default);
+    Task<PrestamoDto> AprobarPrestamoAsync(Guid prestamoId, Guid responsableId, string? rolActor = null, CancellationToken ct = default);
     Task<PrestamoDto> RegistrarDevolucionAsync(Guid prestamoId, RegistrarDevolucionDto dto, Guid? responsableId = null, CancellationToken ct = default);
 }
 

@@ -1272,6 +1272,145 @@
               }
             }
           ]
+        },
+        {
+          "name": "Solicitar préstamo como Colaborador (Pendiente)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/prestamos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prestamos"
+              ],
+              "query": []
+            },
+            "description": "El Colaborador solicita un préstamo y se registra en estado Pendiente sin cambiar el estado del equipo.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"equipoId\": \"{{equipoDisponibleId}}\",\n  \"usuarioId\": \"{{colaboradorId}}\",\n  \"fechaPrestamo\": \"2026-04-01\",\n  \"fechaDevolucion\": \"2026-04-08\",\n  \"observacion\": \"Solicitud de equipo por colaborador pendiente de aprobación\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenColaborador}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "const j = pm.response.json();",
+                  "pm.test('Queda en estado Pendiente', function(){ pm.expect(j.estadoPrestamo).to.eql('Pendiente'); });",
+                  "pm.collectionVariables.set('solicitudPendienteId', j.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar solicitudes pendientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/prestamos?estadoPrestamo=Pendiente",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prestamos"
+              ],
+              "query": [
+                {
+                  "key": "estadoPrestamo",
+                  "value": "Pendiente"
+                }
+              ]
+            },
+            "description": "Lista las solicitudes de préstamo en estado Pendiente de aprobación.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Todas las solicitudes están Pendientes', function(){ pm.response.json().forEach(p => pm.expect(p.estadoPrestamo).to.eql('Pendiente')); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Aprobar solicitud de préstamo (PATCH /aprobar)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/prestamos/{{solicitudPendienteId}}/aprobar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prestamos",
+                "{{solicitudPendienteId}}",
+                "aprobar"
+              ],
+              "query": []
+            },
+            "description": "El Responsable de Tecnología o Administrador aprueba la solicitud pendiente: pasa a Activo, marca el equipo como Prestado y registra al aprobador como responsable (RN-05).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Código HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "const j = pm.response.json();",
+                  "pm.test('Préstamo pasa a Activo y tiene responsable (RN-05)', function(){ pm.expect(j.estadoPrestamo).to.eql('Activo'); pm.expect(j.responsableId).to.not.be.null; });"
+                ]
+              }
+            }
+          ]
         }
       ]
     },

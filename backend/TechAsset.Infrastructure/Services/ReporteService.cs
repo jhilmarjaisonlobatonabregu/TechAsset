@@ -28,6 +28,7 @@ public class ReporteService : IReporteService
             .AsNoTracking()
             .Include(p => p.Usuario)
             .Include(p => p.Equipo)
+            .Where(p => p.EstadoPrestamo != EstadosPrestamo.Pendiente)
             .ToListAsync(ct);
 
         var totalEquipos = equipos.Count;
@@ -119,7 +120,11 @@ public class ReporteService : IReporteService
         return equipos
             .Select(e =>
             {
-                var ultimoPrestamo = e.Prestamos
+                var prestamosEfectivos = e.Prestamos
+                    .Where(p => p.EstadoPrestamo != EstadosPrestamo.Pendiente)
+                    .ToList();
+
+                var ultimoPrestamo = prestamosEfectivos
                     .OrderByDescending(p => p.FechaPrestamo)
                     .ThenByDescending(p => p.FechaRegistro)
                     .FirstOrDefault();
@@ -132,7 +137,7 @@ public class ReporteService : IReporteService
                     Categoria = e.Categoria,
                     Marca = e.Marca,
                     EstadoActual = e.Estado,
-                    TotalPrestamos = e.Prestamos.Count,
+                    TotalPrestamos = prestamosEfectivos.Count,
                     UltimoUsuario = ultimoPrestamo?.Usuario?.NombreCompleto,
                     UltimaArea = ultimoPrestamo?.Usuario?.Area
                 };
@@ -148,6 +153,7 @@ public class ReporteService : IReporteService
         var prestamos = await _db.Prestamos
             .AsNoTracking()
             .Include(p => p.Usuario)
+            .Where(p => p.EstadoPrestamo != EstadosPrestamo.Pendiente)
             .ToListAsync(ct);
 
         var usuarios = await _db.Usuarios

@@ -342,10 +342,10 @@ erDiagram
         date fecha_devolucion_real "NULL"
         text observacion "NOT NULL"
         text observacion_devolucion "NULL"
-        varchar_30 estado_prestamo "NOT NULL CHECK (Activo, Devuelto) + UK parcial (RN-01)"
+        varchar_30 estado_prestamo "NOT NULL CHECK (Pendiente, Activo, Devuelto) + UK parcial sobre Activo (RN-01)"
         uuid usuario_id FK "NOT NULL REFERENCES usuarios(id)"
         uuid equipo_id FK "NOT NULL REFERENCES equipos(id) ON DELETE RESTRICT (RN-06)"
-        uuid responsable_id FK "NOT NULL REFERENCES usuarios(id) (RN-05)"
+        uuid responsable_id FK "NULL en Pendiente / NOT NULL en Activo y Devuelto REFERENCES usuarios(id) (RN-05)"
     }
 
     MOVIMIENTOS_INVENTARIO {

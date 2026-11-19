@@ -75,6 +75,7 @@ public class TechAssetDbContext : DbContext
             entity.HasOne(x => x.Responsable)
                 .WithMany(u => u.PrestamosGestionados)
                 .HasForeignKey(x => x.ResponsableId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(x => x.Equipo)

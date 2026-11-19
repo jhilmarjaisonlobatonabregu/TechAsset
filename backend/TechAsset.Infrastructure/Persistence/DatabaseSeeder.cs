@@ -436,6 +436,32 @@ public static class DatabaseSeeder
                 Observacion = "Segmentación de VLANs en laboratorio de contingencia de red.",
                 EstadoPrestamo = EstadosPrestamo.Activo,
                 FechaRegistro = fechaBase.AddDays(50)
+            },
+
+            // --- 2 Solicitudes Pendientes de Aprobación (equipos permanecen en Estado = Disponible y ResponsableId = null) ---
+            new()
+            {
+                Id = Guid.Parse("33333333-3333-3333-3333-333333333019"),
+                EquipoId = eLap3.Id,
+                UsuarioId = uColabDev1.Id,
+                ResponsableId = null,
+                FechaPrestamo = new DateOnly(2026, 3, 12),
+                FechaDevolucion = new DateOnly(2026, 3, 26),
+                Observacion = "Solicitud de laptop adicional para pruebas de carga y estrés del módulo de préstamos.",
+                EstadoPrestamo = EstadosPrestamo.Pendiente,
+                FechaRegistro = fechaBase.AddDays(56)
+            },
+            new()
+            {
+                Id = Guid.Parse("33333333-3333-3333-3333-333333333020"),
+                EquipoId = eLap4.Id,
+                UsuarioId = uColabQa.Id,
+                ResponsableId = null,
+                FechaPrestamo = new DateOnly(2026, 3, 13),
+                FechaDevolucion = new DateOnly(2026, 3, 27),
+                Observacion = "Solicitud de equipo portátil para validación funcional en entorno de preproducción.",
+                EstadoPrestamo = EstadosPrestamo.Pendiente,
+                FechaRegistro = fechaBase.AddDays(57)
             }
         };
 
@@ -463,6 +489,10 @@ public static class DatabaseSeeder
 
         foreach (var pr in prestamos)
         {
+            if (pr.EstadoPrestamo == EstadosPrestamo.Pendiente)
+            {
+                continue;
+            }
             var colab = usuarios.First(u => u.Id == pr.UsuarioId);
             movimientos.Add(new MovimientoInventario
             {

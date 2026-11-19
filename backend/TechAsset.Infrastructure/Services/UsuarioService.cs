@@ -194,7 +194,7 @@ public class UsuarioService : IUsuarioService
         Area = u.Area,
         Rol = u.Rol,
         Estado = u.Estado,
-        TotalPrestamos = u.PrestamosRecibidos?.Count ?? 0,
+        TotalPrestamos = u.PrestamosRecibidos?.Count(p => p.EstadoPrestamo != EstadosPrestamo.Pendiente) ?? 0,
         PrestamosActivos = u.PrestamosRecibidos?.Count(p => p.EstadoPrestamo == EstadosPrestamo.Activo) ?? 0,
         FechaRegistro = u.FechaRegistro
     };

@@ -299,7 +299,7 @@ public class EquipoService : IEquipoService
             Categoria = e.Categoria,
             Marca = e.Marca,
             Estado = e.Estado,
-            TotalPrestamos = e.Prestamos?.Count ?? 0,
+            TotalPrestamos = e.Prestamos?.Count(p => p.EstadoPrestamo != EstadosPrestamo.Pendiente) ?? 0,
             UsuarioActual = prestamoActivo?.Usuario?.NombreCompleto,
             AreaActual = prestamoActivo?.Usuario?.Area,
             FechaRegistro = e.FechaRegistro

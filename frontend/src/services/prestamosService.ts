@@ -31,7 +31,13 @@ export const prestamosService = {
     apiClient.get<PrestamoDto[]>('/prestamos/activos'),
 
   registrarPrestamo: (payload: RegistrarPrestamoPayload): Promise<PrestamoDto> =>
-    apiClient.post<PrestamoDto>('/prestamos', payload),
+    apiClient.post<PrestamoDto>('/prestamos', {
+      ...payload,
+      responsableId: payload.responsableId || null,
+    }),
+
+  aprobarPrestamo: (prestamoId: string): Promise<PrestamoDto> =>
+    apiClient.patch<PrestamoDto>(`/prestamos/${prestamoId}/aprobar`),
 
   registrarDevolucion: (
     prestamoId: string,

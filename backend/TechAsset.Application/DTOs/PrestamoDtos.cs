@@ -21,7 +21,7 @@ public class PrestamoDto
     public string EquipoCategoria { get; set; } = string.Empty;
     public string EquipoMarca { get; set; } = string.Empty;
 
-    public Guid ResponsableId { get; set; }
+    public Guid? ResponsableId { get; set; }
     public string ResponsableNombre { get; set; } = string.Empty;
     public DateTime FechaRegistro { get; set; }
 }
@@ -30,7 +30,7 @@ public class CrearPrestamoDto
 {
     public Guid EquipoId { get; set; }
     public Guid UsuarioId { get; set; }
-    public Guid ResponsableId { get; set; }
+    public Guid? ResponsableId { get; set; }
     public DateOnly FechaPrestamo { get; set; }
     public DateOnly FechaDevolucion { get; set; }
     public string? Observacion { get; set; }

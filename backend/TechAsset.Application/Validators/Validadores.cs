@@ -124,7 +124,8 @@ public class CrearPrestamoValidator : AbstractValidator<CrearPrestamoDto>
             .NotEmpty().WithMessage("Debe seleccionar un colaborador receptor.");
 
         RuleFor(x => x.ResponsableId)
-            .NotEmpty().WithMessage("RN-05: Todo préstamo debe tener un usuario responsable registrado.");
+            .Must(r => r is null || r != Guid.Empty)
+            .WithMessage("RN-05: Todo préstamo debe tener un usuario responsable registrado.");
 
         RuleFor(x => x.FechaDevolucion)
             .GreaterThan(x => x.FechaPrestamo)

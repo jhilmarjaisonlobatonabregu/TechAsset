@@ -84,7 +84,7 @@ npm run dev
 ```bash
 dotnet test backend/TechAsset.sln
 ```
-- Ejecuta las **34 pruebas automatizadas** que cubren las reglas `RN-01` a `RN-10`, los 17 requerimientos funcionales, autenticación JWT y validadores FluentValidation.
+- Ejecuta las **39 pruebas automatizadas** que cubren las reglas `RN-01` a `RN-10`, los 17 requerimientos funcionales, el flujo de solicitud (`Pendiente`) y aprobación de préstamos (`Activo`), autenticación JWT y validadores FluentValidation.
 
 ---
 
@@ -94,9 +94,9 @@ dotnet test backend/TechAsset.sln
 
 | Rol del Sistema | Nombres y Apellidos | Correo Institucional | Contraseña | Permisos principales |
 |---|---|---|---|---|
-| **Administrador** | Carlos Mendoza Salazar | `cmendoza@innovatech.pe` | `Admin2026!` | Gestión total de usuarios (único que deshabilita según `RN-09`), equipos, préstamos, reportes y dashboard. |
-| **Responsable de Tecnología** | Lucía Quispe Huamán | `lquispe@innovatech.pe` | `Soporte2026!` | Registro/actualización de equipos, registro de préstamos (`RN-05`) y devoluciones (`RN-10`), reportes y dashboard. |
-| **Colaborador** | Alejandro Torres Mejía | `atorres@innovatech.pe` | `Colab2026!` | Consulta de disponibilidad de equipos, solicitud de préstamos propios, historial personal y dashboard. |
+| **Administrador** | Carlos Mendoza Salazar | `cmendoza@innovatech.pe` | `Admin2026!` | Gestión total de usuarios (único que deshabilita según `RN-09`), equipos, registro y aprobación de préstamos, reportes y dashboard. |
+| **Responsable de Tecnología** | Lucía Quispe Huamán | `lquispe@innovatech.pe` | `Soporte2026!` | Registro/actualización de equipos, aprobación de solicitudes pendientes y registro de préstamos (`RN-05`) y devoluciones (`RN-10`), reportes y dashboard. |
+| **Colaborador** | Alejandro Torres Mejía | `atorres@innovatech.pe` | `Colab2026!` | Consulta de disponibilidad de equipos, solicitud de préstamos propios (creados en estado `Pendiente`), historial personal y dashboard. |
 
 ### Características de la Pantalla de Inicio de Sesión (`/login`)
 - **Proporción 60/40:** Panel de marca izquierdo (60%, `lg:col-span-3`) con titular corporativo de alto impacto, párrafo descriptivo centrado verticalmente, degradado azul con overlay oscuro preparado para imagen de fondo (contraste WCAG AAA) y pie institucional con copyright; panel de formulario derecho (40%, `lg:col-span-2`, centrado a `max-w-[420px]`). En dispositivos móviles se oculta el panel izquierdo para máxima usabilidad.
@@ -109,7 +109,7 @@ dotnet test backend/TechAsset.sln
 
 ## 6. Cobertura de Requerimientos y Reglas de Negocio
 
-- **17 Requerimientos Funcionales (`RF-01`..`RF-17`):** Usuarios (crear, actualizar, consultar, deshabilitar), Equipos (crear, actualizar, inventario, estado), Préstamos (registrar, devolver, historial, activos), Dashboard (`RF-13` con los 6 KPIs obligatorios) y Reportes (`RF-14`..`RF-17` con exportación CSV e impresión PDF).
+- **17 Requerimientos Funcionales (`RF-01`..`RF-17`):** Usuarios (crear, actualizar, consultar, deshabilitar), Equipos (crear, actualizar, inventario, estado), Préstamos (solicitar en estado `Pendiente`, aprobar vía `PATCH /api/prestamos/{id}/aprobar` o registrar directamente en estado `Activo`, devolver a `Devuelto`, historial y activos), Dashboard (`RF-13` con los 6 KPIs obligatorios) y Reportes (`RF-14`..`RF-17` con exportación CSV e impresión PDF).
 - **10 Reglas de Negocio (`RN-01`..`RN-10`):** Validadas en frontend (React Hook Form + Zod), backend (Dominio + FluentValidation + Middleware) y PostgreSQL (índices únicos y `CHECK`).
 
 ---
@@ -125,4 +125,4 @@ dotnet test backend/TechAsset.sln
 | Informe Técnico, Evidencias, Casos de Prueba y Pregunta de Reflexión | [`docs/informe-tecnico.md`](docs/informe-tecnico.md) |
 | Guion de Sustentación (5–7 min, 7 escenarios mínimos) | [`docs/guion-sustentacion.md`](docs/guion-sustentacion.md) |
 | Script DDL + Datos Semilla PostgreSQL | [`database/init_techasset.sql`](database/init_techasset.sql) |
-| Colección de Postman (47 peticiones y tests automatizados) | [`postman/TechAsset.postman_collection.json`](postman/TechAsset.postman_collection.json) |
+| Colección de Postman (50 peticiones y tests automatizados) | [`postman/TechAsset.postman_collection.json`](postman/TechAsset.postman_collection.json) |

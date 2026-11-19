@@ -105,24 +105,33 @@ public class PrestamoService : IPrestamoService
         return MapearDto(prestamo);
     }
 
-    public async Task<PrestamoDto> RegistrarPrestamoAsync(CrearPrestamoDto dto, CancellationToken ct = default)
+    public async Task<PrestamoDto> RegistrarPrestamoAsync(
+        CrearPrestamoDto dto,
+        string? rolActor = null,
+        CancellationToken ct = default)
     {
-        // RN-05: Todo préstamo debe tener un usuario responsable registrado
-        if (dto.ResponsableId == Guid.Empty)
-        {
-            throw new ReglaNegocioException(
-                "RN-05",
-                "RN-05: Todo préstamo debe tener un usuario responsable registrado.",
-                400);
-        }
+        var esSolicitudColaborador = string.Equals(rolActor, Roles.Colaborador, StringComparison.OrdinalIgnoreCase);
 
-        var responsable = await _db.Usuarios.FirstOrDefaultAsync(u => u.Id == dto.ResponsableId, ct);
-        if (responsable is null || !responsable.Estado)
+        Usuario? responsable = null;
+        if (!esSolicitudColaborador)
         {
-            throw new ReglaNegocioException(
-                "RN-05",
-                "RN-05: Todo préstamo debe tener un usuario responsable válido y activo registrado.",
-                400);
+            // RN-05: Todo préstamo debe tener un usuario responsable registrado
+            if (!dto.ResponsableId.HasValue || dto.ResponsableId.Value == Guid.Empty)
+            {
+                throw new ReglaNegocioException(
+                    "RN-05",
+                    "RN-05: Todo préstamo debe tener un usuario responsable registrado.",
+                    400);
+            }
+
+            responsable = await _db.Usuarios.FirstOrDefaultAsync(u => u.Id == dto.ResponsableId.Value, ct);
+            if (responsable is null || !responsable.Estado)
+            {
+                throw new ReglaNegocioException(
+                    "RN-05",
+                    "RN-05: Todo préstamo debe tener un usuario responsable válido y activo registrado.",
+                    400);
+            }
         }
 
         // RN-04: La fecha de devolución debe ser posterior a la fecha de préstamo
@@ -170,13 +179,31 @@ public class PrestamoService : IPrestamoService
                 409);
         }
 
+        if (esSolicitudColaborador)
+        {
+            var solicitud = Prestamo.CrearSolicitud(
+                dto.EquipoId,
+                dto.UsuarioId,
+                dto.FechaPrestamo,
+                dto.FechaDevolucion,
+                dto.Observacion);
+
+            _db.Prestamos.Add(solicitud);
+            await _db.SaveChangesAsync(ct);
+
+            solicitud.Usuario = usuario;
+            solicitud.Equipo = equipo;
+
+            return MapearDto(solicitud);
+        }
+
         var estadoAnteriorEquipo = equipo.Estado;
         equipo.MarcarComoPrestado();
 
         var prestamo = Prestamo.Crear(
             dto.EquipoId,
             dto.UsuarioId,
-            dto.ResponsableId,
+            responsable!.Id,
             dto.FechaPrestamo,
             dto.FechaDevolucion,
             dto.Observacion);
@@ -203,6 +230,113 @@ public class PrestamoService : IPrestamoService
         prestamo.Equipo = equipo;
         prestamo.Responsable = responsable;
 
+        return MapearDto(prestamo);
+    }
+
+    public async Task<PrestamoDto> AprobarPrestamoAsync(
+        Guid prestamoId,
+        Guid responsableId,
+        string? rolActor = null,
+        CancellationToken ct = default)
+    {
+        if (!string.IsNullOrWhiteSpace(rolActor) &&
+            !string.Equals(rolActor, Roles.Administrador, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(rolActor, Roles.ResponsableTecnologia, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ReglaNegocioException(
+                "AUTH-403",
+                "Solo el Administrador o el Responsable de Tecnología pueden aprobar préstamos.",
+                403);
+        }
+
+        if (responsableId == Guid.Empty)
+        {
+            throw new ReglaNegocioException(
+                "RN-05",
+                "RN-05: Todo préstamo debe tener un usuario responsable registrado.",
+                400);
+        }
+
+        var responsable = await _db.Usuarios.FirstOrDefaultAsync(u => u.Id == responsableId, ct);
+        if (responsable is null || !responsable.Estado)
+        {
+            throw new ReglaNegocioException(
+                "RN-05",
+                "RN-05: Todo préstamo debe tener un usuario responsable válido y activo registrado.",
+                400);
+        }
+
+        if (string.Equals(responsable.Rol, Roles.Colaborador, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ReglaNegocioException(
+                "AUTH-403",
+                "Un colaborador no tiene permisos para aprobar solicitudes de préstamo.",
+                403);
+        }
+
+        var prestamo = await _db.Prestamos
+            .Include(p => p.Equipo)
+            .Include(p => p.Usuario)
+            .Include(p => p.Responsable)
+            .FirstOrDefaultAsync(p => p.Id == prestamoId, ct);
+
+        if (prestamo is null)
+        {
+            throw new ReglaNegocioException("PRE-404", "El préstamo indicado no existe.", 404);
+        }
+
+        if (!string.Equals(prestamo.EstadoPrestamo, EstadosPrestamo.Pendiente, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ReglaNegocioException(
+                "VAL-APROBACION",
+                "Solo se puede aprobar un préstamo que se encuentre en estado 'Pendiente'.",
+                409);
+        }
+
+        var equipo = prestamo.Equipo ?? await _db.Equipos.FirstOrDefaultAsync(e => e.Id == prestamo.EquipoId, ct);
+        if (equipo is null)
+        {
+            throw new ReglaNegocioException("EQP-404", "El equipo tecnológico asociado no existe.", 404);
+        }
+
+        // Revalidar RN-01, RN-02 y RN-03 antes de aprobar
+        equipo.ValidarDisponibleParaPrestamo();
+
+        var tienePrestamoActivo = await _db.Prestamos.AnyAsync(
+            p => p.EquipoId == equipo.Id && p.EstadoPrestamo == EstadosPrestamo.Activo && p.Id != prestamo.Id,
+            ct);
+
+        if (tienePrestamoActivo)
+        {
+            throw new ReglaNegocioException(
+                "RN-01",
+                "RN-01: Un equipo solo puede estar asociado a un préstamo activo.",
+                409);
+        }
+
+        var estadoAnteriorEquipo = equipo.Estado;
+        equipo.MarcarComoPrestado();
+        prestamo.Aprobar(responsable.Id);
+        prestamo.Responsable = responsable;
+
+        var nombreUsuario = prestamo.Usuario?.NombreCompleto ?? "Colaborador";
+        var areaUsuario = prestamo.Usuario?.Area ?? "Infraestructura y Soporte";
+
+        _db.MovimientosInventario.Add(new MovimientoInventario
+        {
+            Id = Guid.NewGuid(),
+            Fecha = DateTime.UtcNow,
+            TipoMovimiento = TiposMovimiento.Prestamo,
+            EquipoId = equipo.Id,
+            EstadoAnterior = estadoAnteriorEquipo,
+            EstadoNuevo = EstadosEquipo.Prestado,
+            UsuarioId = prestamo.UsuarioId,
+            ResponsableId = responsable.Id,
+            Area = areaUsuario,
+            Observacion = $"Préstamo aprobado y asignado a {nombreUsuario} ({areaUsuario}). {prestamo.Observacion}"
+        });
+
+        await _db.SaveChangesAsync(ct);
         return MapearDto(prestamo);
     }
 

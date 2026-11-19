@@ -11,7 +11,7 @@ export type CategoriaEquipo =
   | 'Proyectores multimedia'
   | 'Equipos de red';
 
-export type EstadoPrestamo = 'Activo' | 'Devuelto';
+export type EstadoPrestamo = 'Pendiente' | 'Activo' | 'Devuelto';
 
 export type TipoMovimiento =
   | 'AltaEquipo'
@@ -129,14 +129,14 @@ export interface PrestamoDto {
   equipoNombre: string;
   equipoCategoria: string;
   equipoMarca: string;
-  responsableId: string;
+  responsableId?: string | null;
   responsableNombre: string;
 }
 
 export interface RegistrarPrestamoPayload {
   equipoId: string;
   usuarioId: string;
-  responsableId: string;
+  responsableId?: string | null;
   fechaPrestamo: string;
   fechaDevolucion: string;
   observacion: string;
