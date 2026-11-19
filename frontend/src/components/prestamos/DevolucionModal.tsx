@@ -24,7 +24,11 @@ export function DevolucionModal({ prestamo, onClose, onGuardado }: DevolucionMod
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<DevolucionFormValues>({ resolver: zodResolver(esquema), defaultValues: { observacion: '', fechaDevolucionReal: obtenerFechaInputHoy(), estadoEquipoDestino: 'Disponible' } });
+  } = useForm<DevolucionFormValues>({
+    resolver: zodResolver(esquema),
+    defaultValues: { observacion: '', fechaDevolucionReal: obtenerFechaInputHoy(), estadoEquipoDestino: 'Disponible' },
+    mode: 'onTouched',
+  });
 
   useEffect(() => {
     if (prestamo) {

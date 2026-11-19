@@ -1,3 +1,23 @@
+import { ESTADO_PRESTAMO } from '../constants/catalogos';
+
+const ETIQUETAS_TIPO_MOVIMIENTO: Record<string, string> = {
+  AltaEquipo: 'Alta de equipo',
+  Alta: 'Alta de equipo',
+  ActualizacionEquipo: 'Actualización de equipo',
+  Prestamo: 'Préstamo',
+  Devolucion: 'Devolución',
+  CambioEstado: 'Cambio de estado',
+  Mantenimiento: 'Cambio de estado',
+  Reactivacion: 'Cambio de estado',
+  BajaLogica: 'Baja lógica',
+  Baja: 'Baja lógica',
+};
+
+export function formatTipoMovimiento(tipo?: string | null): string {
+  if (!tipo) return '—';
+  return ETIQUETAS_TIPO_MOVIMIENTO[tipo] ?? tipo;
+}
+
 export function formatFechaCorta(fechaIso?: string | null): string {
   if (!fechaIso) return '—';
   const date = new Date(fechaIso);
@@ -32,7 +52,7 @@ export function obtenerFechaInputHoy(diasAdicionales = 0): string {
 }
 
 export function esPrestamoVencido(fechaDevolucionIso: string, estadoPrestamo: string): boolean {
-  if (estadoPrestamo !== 'Activo') return false;
+  if (estadoPrestamo !== ESTADO_PRESTAMO.ACTIVO) return false;
   const fechaDev = new Date(fechaDevolucionIso);
   if (Number.isNaN(fechaDev.getTime())) return false;
   const hoy = new Date();

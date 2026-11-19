@@ -1,11 +1,16 @@
 import { Download, Printer, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Button, Card, DataTable, DatePicker, FormField, Input, Select, StatusBadge, type DataTableColumn } from '../components/ui';
+import { TIPOS_MOVIMIENTO } from '../constants/catalogos';
 import { useCarga, useDebounce } from '../hooks';
 import { reportesService } from '../services/reportesService';
 import type { EquipoDto, EquipoMasUtilizadoDto, MovimientoInventarioDto, PrestamoPorAreaDto, ReporteEquiposPorEstadoDto } from '../types';
 import { exportarACsv } from '../utils/exportCsv';
-import { formatFechaHora } from '../utils/formatters';
+import { formatFechaHora, formatTipoMovimiento } from '../utils/formatters';
+
+export interface ReportesPageProps {
+  accionInicial?: string;
+}
 
 type Pestana = 'estado' | 'top' | 'area' | 'movimientos';
 
@@ -24,11 +29,13 @@ const PRESETS: ReadonlyArray<{ valor: string; label: string }> = [
   { valor: 'Baja', label: 'De baja' },
 ];
 
-const TIPOS_MOV = ['AltaEquipo', 'ActualizacionEquipo', 'Prestamo', 'Devolucion', 'CambioEstado', 'BajaLogica'];
-
 /** RF-14 a RF-17: reportes con exportación CSV e impresión / PDF. */
-export function ReportesPage() {
-  const [pestana, setPestana] = useState<Pestana>('estado');
+export function ReportesPage({ accionInicial }: ReportesPageProps) {
+  const pestanaInicial: Pestana =
+    accionInicial === 'area' || accionInicial === 'top' || accionInicial === 'movimientos'
+      ? accionInicial
+      : 'estado';
+  const [pestana, setPestana] = useState<Pestana>(pestanaInicial);
   const [estado, setEstado] = useState('');
   const [tipo, setTipo] = useState('');
   const [busqueda, setBusqueda] = useState('');
@@ -72,7 +79,7 @@ export function ReportesPage() {
   ];
   const colMov: DataTableColumn<MovimientoInventarioDto>[] = [
     { key: 'f', header: 'Fecha', sortable: true, sortAccessor: (m) => m.fecha, render: (m) => formatFechaHora(m.fecha) },
-    { key: 't', header: 'Tipo', sortable: true, sortAccessor: (m) => m.tipoMovimiento, render: (m) => <span className="font-semibold">{m.tipoMovimiento}</span> },
+    { key: 't', header: 'Tipo', sortable: true, sortAccessor: (m) => formatTipoMovimiento(m.tipoMovimiento), render: (m) => <span className="font-semibold">{formatTipoMovimiento(m.tipoMovimiento)}</span> },
     { key: 'e', header: 'Equipo', render: (m) => `${m.equipoCodigo} — ${m.equipoNombre}` },
     { key: 'tr', header: 'Transición', render: (m) => (<span className="flex items-center gap-1.5"><StatusBadge status={m.estadoAnterior} /> → <StatusBadge status={m.estadoNuevo} /></span>) },
     { key: 'u', header: 'Usuario / Responsable', render: (m) => (<div><p className="text-sm">{m.usuarioInvolucrado ?? '—'}</p><p className="text-xs text-slate-500">{m.responsableNombre ?? ''}</p></div>) },
@@ -96,11 +103,22 @@ export function ReportesPage() {
       ]);
     } else {
       exportarACsv('reporte-movimientos', movimientos.datos, [
-        { encabezado: 'Fecha', obtenerValor: (m) => m.fecha }, { encabezado: 'Tipo', obtenerValor: (m) => m.tipoMovimiento },
+        { encabezado: 'Fecha', obtenerValor: (m) => m.fecha }, { encabezado: 'Tipo', obtenerValor: (m) => formatTipoMovimiento(m.tipoMovimiento) },
         { encabezado: 'Equipo', obtenerValor: (m) => m.equipoCodigo }, { encabezado: 'Estado anterior', obtenerValor: (m) => m.estadoAnterior },
         { encabezado: 'Estado nuevo', obtenerValor: (m) => m.estadoNuevo }, { encabezado: 'Observación', obtenerValor: (m) => m.observacion },
       ]);
     }
+  };
+
+  const manejarTeclaPestana = (e: React.KeyboardEvent<HTMLButtonElement>, indiceActual: number) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const total = PESTANAS.length;
+    const siguienteIndice =
+      e.key === 'ArrowRight' ? (indiceActual + 1) % total : (indiceActual - 1 + total) % total;
+    const siguienteId = PESTANAS[siguienteIndice].id;
+    setPestana(siguienteId);
+    document.getElementById(`tab-reportes-${siguienteId}`)?.focus();
   };
 
   return (
@@ -117,44 +135,69 @@ export function ReportesPage() {
       </div>
 
       <div role="tablist" aria-label="Reportes" className="no-print flex flex-wrap gap-1 border-b border-slate-200 dark:border-slate-800">
-        {PESTANAS.map((p) => (
-          <button key={p.id} role="tab" aria-selected={pestana === p.id} type="button" onClick={() => setPestana(p.id)} className={`cursor-pointer border-b-2 px-4 py-2 text-sm font-semibold ${pestana === p.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+        {PESTANAS.map((p, idx) => (
+          <button
+            key={p.id}
+            id={`tab-reportes-${p.id}`}
+            role="tab"
+            aria-selected={pestana === p.id}
+            aria-controls={`tabpanel-reportes-${p.id}`}
+            tabIndex={pestana === p.id ? 0 : -1}
+            type="button"
+            onClick={() => setPestana(p.id)}
+            onKeyDown={(e) => manejarTeclaPestana(e, idx)}
+            className={`cursor-pointer border-b-2 px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${pestana === p.id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
             {p.label}
           </button>
         ))}
       </div>
 
-      {pestana === 'estado' && (
-        <div className="space-y-4">
-          <div className="no-print flex flex-wrap gap-2" role="group" aria-label="Accesos directos por estado">
-            {PRESETS.map((p) => (
-              <button key={p.valor} type="button" onClick={() => setEstado(p.valor)} className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-semibold ${estado === p.valor ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}>{p.label}</button>
-            ))}
+      <div
+        id={`tabpanel-reportes-${pestana}`}
+        role="tabpanel"
+        aria-labelledby={`tab-reportes-${pestana}`}
+      >
+        {pestana === 'estado' && (
+          <div className="space-y-4">
+            <div className="no-print flex flex-wrap gap-2" role="group" aria-label="Accesos directos por estado">
+              {PRESETS.map((p) => (
+                <button
+                  key={p.valor}
+                  type="button"
+                  aria-pressed={estado === p.valor}
+                  onClick={() => setEstado(p.valor)}
+                  className={`cursor-pointer rounded-full border px-3 py-1 text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${estado === p.valor ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 text-slate-600 dark:border-slate-700 dark:text-slate-300'}`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-4">
+              {(porEstado.datos?.resumen ?? []).map((r) => (
+                <Card key={r.estado} className="text-center"><p className="text-2xl font-bold">{r.cantidad}</p><p className="text-xs text-slate-500">{r.estado} · {r.porcentaje.toFixed(0)}%</p></Card>
+              ))}
+            </div>
+            <DataTable data={porEstado.datos?.equipos ?? []} columns={colEquipos} rowKey={(e) => e.id} loading={porEstado.cargando} emptyTitle="Sin equipos en este estado" emptyDescription="Seleccione otro filtro." />
           </div>
-          <div className="grid gap-3 sm:grid-cols-4">
-            {(porEstado.datos?.resumen ?? []).map((r) => (
-              <Card key={r.estado} className="text-center"><p className="text-2xl font-bold">{r.cantidad}</p><p className="text-xs text-slate-500">{r.estado} · {r.porcentaje.toFixed(0)}%</p></Card>
-            ))}
-          </div>
-          <DataTable data={porEstado.datos?.equipos ?? []} columns={colEquipos} rowKey={(e) => e.id} loading={porEstado.cargando} emptyTitle="Sin equipos en este estado" emptyDescription="Seleccione otro filtro." />
-        </div>
-      )}
+        )}
 
-      {pestana === 'top' && <DataTable data={top.datos} columns={colTop} rowKey={(e) => e.equipoId} loading={top.cargando} emptyTitle="Aún no hay préstamos" emptyDescription="El ranking se genera con el historial de préstamos." />}
-      {pestana === 'area' && <DataTable data={areas.datos} columns={colAreas} rowKey={(a) => a.area} loading={areas.cargando} emptyTitle="Sin datos por área" emptyDescription="Registre préstamos para ver el consumo por área." />}
+        {pestana === 'top' && <DataTable data={top.datos} columns={colTop} rowKey={(e) => e.equipoId} loading={top.cargando} emptyTitle="Aún no hay préstamos" emptyDescription="El ranking se genera con el historial de préstamos." />}
+        {pestana === 'area' && <DataTable data={areas.datos} columns={colAreas} rowKey={(a) => a.area} loading={areas.cargando} emptyTitle="Sin datos por área" emptyDescription="Registre préstamos para ver el consumo por área." />}
 
-      {pestana === 'movimientos' && (
-        <div className="space-y-4">
-          <div className="no-print grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-5 dark:border-slate-800 dark:bg-slate-900">
-            <FormField label="Buscar" htmlFor="m-busqueda" className="lg:col-span-2"><Input id="m-busqueda" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Equipo u observación…" /></FormField>
-            <FormField label="Tipo" htmlFor="m-tipo"><Select id="m-tipo" value={tipo} onChange={(e) => setTipo(e.target.value)} placeholder="Todos" options={TIPOS_MOV.map((t) => ({ value: t, label: t }))} /></FormField>
-            <FormField label="Desde" htmlFor="m-desde"><DatePicker id="m-desde" value={desde} onChange={(e) => setDesde(e.target.value)} /></FormField>
-            <FormField label="Hasta" htmlFor="m-hasta"><DatePicker id="m-hasta" value={hasta} onChange={(e) => setHasta(e.target.value)} /></FormField>
-            <div className="sm:col-span-2 lg:col-span-5"><Button size="sm" variant="secondary" leftIcon={<RefreshCw className="h-4 w-4" />} onClick={() => { setTipo(''); setBusqueda(''); setDesde(''); setHasta(''); }}>Limpiar filtros</Button></div>
+        {pestana === 'movimientos' && (
+          <div className="space-y-4">
+            <div className="no-print grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-5 dark:border-slate-800 dark:bg-slate-900">
+              <FormField label="Buscar" htmlFor="m-busqueda" className="lg:col-span-2"><Input id="m-busqueda" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Equipo u observación…" /></FormField>
+              <FormField label="Tipo" htmlFor="m-tipo"><Select id="m-tipo" value={tipo} onChange={(e) => setTipo(e.target.value)} placeholder="Todos" options={TIPOS_MOVIMIENTO.map((t) => ({ value: t, label: formatTipoMovimiento(t) }))} /></FormField>
+              <FormField label="Desde" htmlFor="m-desde"><DatePicker id="m-desde" value={desde} onChange={(e) => setDesde(e.target.value)} /></FormField>
+              <FormField label="Hasta" htmlFor="m-hasta"><DatePicker id="m-hasta" value={hasta} onChange={(e) => setHasta(e.target.value)} /></FormField>
+              <div className="sm:col-span-2 lg:col-span-5"><Button size="sm" variant="secondary" leftIcon={<RefreshCw className="h-4 w-4" />} onClick={() => { setTipo(''); setBusqueda(''); setDesde(''); setHasta(''); }}>Limpiar filtros</Button></div>
+            </div>
+            <DataTable data={movimientos.datos} columns={colMov} rowKey={(m) => m.id} loading={movimientos.cargando} emptyTitle="Sin movimientos" emptyDescription="No hay movimientos con los filtros aplicados." />
           </div>
-          <DataTable data={movimientos.datos} columns={colMov} rowKey={(m) => m.id} loading={movimientos.cargando} emptyTitle="Sin movimientos" emptyDescription="No hay movimientos con los filtros aplicados." />
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

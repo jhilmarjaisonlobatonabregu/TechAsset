@@ -5,7 +5,7 @@ import {
   obtenerSesionGuardada,
 } from '../services/apiClient';
 import { authService } from '../services/authService';
-import type { DemoUserDto, UsuarioAuthDto } from '../types';
+import type { UsuarioAuthDto } from '../types';
 
 export interface AuthContextValue {
   usuario: UsuarioAuthDto | null;
@@ -15,7 +15,6 @@ export interface AuthContextValue {
   esResponsableTI: boolean;
   puedeOperarInventario: boolean;
   iniciarSesion: (correo: string, password: string) => Promise<UsuarioAuthDto>;
-  cambiarActorDemo: (actor: DemoUserDto) => Promise<UsuarioAuthDto>;
   cerrarSesion: () => void;
 }
 
@@ -35,12 +34,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return respuesta.usuario;
     },
     [],
-  );
-
-  const cambiarActorDemo = useCallback(
-    async (actor: DemoUserDto): Promise<UsuarioAuthDto> =>
-      iniciarSesion(actor.correo, actor.passwordDemo),
-    [iniciarSesion],
   );
 
   const cerrarSesion = useCallback(() => {
@@ -63,7 +56,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         esResponsableTI,
         puedeOperarInventario,
         iniciarSesion,
-        cambiarActorDemo,
         cerrarSesion,
       }}
     >

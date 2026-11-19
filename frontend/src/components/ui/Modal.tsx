@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl';
 
@@ -20,6 +20,9 @@ const modalSizeClasses: Record<ModalSize, string> = {
   xl: 'max-w-4xl',
 };
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export const Modal: React.FC<ModalProps> = ({
   open,
   onClose,
@@ -29,12 +32,66 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   footer,
 }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+    const timer = window.setTimeout(() => {
+      if (!modalRef.current) return;
+      if (modalRef.current.contains(document.activeElement)) return;
+      const focusables = modalRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+      if (focusables.length > 0) {
+        focusables[0].focus();
+      } else {
+        modalRef.current.focus();
+      }
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+      if (previousFocusRef.current && document.contains(previousFocusRef.current)) {
+        previousFocusRef.current.focus();
+      }
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         onClose();
+        return;
+      }
+
+      if (event.key === 'Tab' && modalRef.current) {
+        const focusables = Array.from(
+          modalRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+        );
+        if (focusables.length === 0) {
+          event.preventDefault();
+          return;
+        }
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement as HTMLElement | null;
+
+        if (event.shiftKey) {
+          if (active === first || !modalRef.current.contains(active)) {
+            event.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (active === last || !modalRef.current.contains(active)) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
       }
     };
 
@@ -59,6 +116,8 @@ export const Modal: React.FC<ModalProps> = ({
       }}
     >
       <div
+        ref={modalRef}
+        tabIndex={-1}
         className={`relative w-full rounded-2xl border border-slate-200 bg-white shadow-2xl transition-all dark:border-slate-800 dark:bg-slate-900 ${modalSizeClasses[size]}`}
       >
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-4 dark:border-slate-800">

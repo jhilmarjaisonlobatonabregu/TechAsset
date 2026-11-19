@@ -10,10 +10,25 @@ import { ReportesPage } from './pages/ReportesPage';
 import { UsuariosPage } from './pages/UsuariosPage';
 import type { VistaNavegacion } from './types';
 
+const SESSION_VISTA_KEY = 'techasset_vista_activa';
+const VISTAS_VALIDAS: readonly VistaNavegacion[] = ['dashboard', 'equipos', 'prestamos', 'usuarios', 'reportes'];
+
+function obtenerVistaGuardada(): VistaNavegacion {
+  try {
+    const guardada = sessionStorage.getItem(SESSION_VISTA_KEY);
+    if (guardada && (VISTAS_VALIDAS as readonly string[]).includes(guardada)) {
+      return guardada as VistaNavegacion;
+    }
+  } catch {
+    // Ignorar fallo de sessionStorage en contextos restringidos
+  }
+  return 'dashboard';
+}
+
 function App() {
   const { esAutenticado, puedeOperarInventario } = useAuth();
   const [mostrarLogin, setMostrarLogin] = useState(false);
-  const [vista, setVista] = useState<VistaNavegacion>('dashboard');
+  const [vista, setVista] = useState<VistaNavegacion>(obtenerVistaGuardada);
   const [accionInicial, setAccionInicial] = useState<string | undefined>(undefined);
 
   if (!esAutenticado) {
@@ -26,6 +41,11 @@ function App() {
   const cambiarVista = (nueva: VistaNavegacion, accion?: string) => {
     setAccionInicial(accion);
     setVista(nueva);
+    try {
+      sessionStorage.setItem(SESSION_VISTA_KEY, nueva);
+    } catch {
+      // Ignorar fallo de sessionStorage
+    }
   };
 
   // Rutas protegidas por rol: el Colaborador no accede a usuarios ni reportes
@@ -38,7 +58,7 @@ function App() {
       {vistaPermitida === 'equipos' && <EquiposPage key={`eq-${accionInicial ?? ''}`} accionInicial={accionInicial} />}
       {vistaPermitida === 'prestamos' && <PrestamosPage key={`pr-${accionInicial ?? ''}`} accionInicial={accionInicial} />}
       {vistaPermitida === 'usuarios' && <UsuariosPage key={`us-${accionInicial ?? ''}`} accionInicial={accionInicial} />}
-      {vistaPermitida === 'reportes' && <ReportesPage />}
+      {vistaPermitida === 'reportes' && <ReportesPage key={`rp-${accionInicial ?? ''}`} accionInicial={accionInicial} />}
     </AppLayout>
   );
 }

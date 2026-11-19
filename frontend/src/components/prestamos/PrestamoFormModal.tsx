@@ -56,6 +56,7 @@ export function PrestamoFormModal({ open, onClose, onGuardado }: PrestamoFormMod
   } = useForm<PrestamoFormValues>({
     resolver: zodResolver(crearPrestamoSchema(puedeOperarInventario)),
     defaultValues: valoresIniciales(),
+    mode: 'onTouched',
   });
 
   useEffect(() => {

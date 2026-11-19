@@ -15,11 +15,11 @@ export type EstadoPrestamo = 'Pendiente' | 'Activo' | 'Devuelto';
 
 export type TipoMovimiento =
   | 'AltaEquipo'
+  | 'ActualizacionEquipo'
   | 'Prestamo'
   | 'Devolucion'
   | 'CambioEstado'
-  | 'BajaLogica'
-  | string;
+  | 'BajaLogica';
 
 export type VistaNavegacion = 'dashboard' | 'equipos' | 'prestamos' | 'usuarios' | 'reportes';
 
@@ -37,16 +37,6 @@ export interface UsuarioAuthDto {
 export interface LoginResponseDto {
   token: string;
   usuario: UsuarioAuthDto;
-}
-
-export interface DemoUserDto {
-  id?: string;
-  nombreCompleto: string;
-  correo: string;
-  passwordDemo: string;
-  rol: RolUsuario;
-  area: string;
-  descripcion?: string;
 }
 
 export interface UsuarioDto {

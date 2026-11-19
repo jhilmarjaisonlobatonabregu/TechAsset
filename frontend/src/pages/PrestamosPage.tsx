@@ -1,9 +1,9 @@
 import { ArrowLeftRight, CheckCircle2, Clock, Download, Plus, RefreshCw, RotateCcw, Search } from 'lucide-react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { DevolucionModal } from '../components/prestamos/DevolucionModal';
 import { PrestamoFormModal } from '../components/prestamos/PrestamoFormModal';
 import { Button, ConfirmDialog, DataTable, DatePicker, FormField, Input, Select, StatusBadge, useToast, type DataTableColumn } from '../components/ui';
-import { AREAS_ORGANIZACION } from '../constants/catalogos';
+import { AREAS_ORGANIZACION, ESTADO_PRESTAMO, ESTADOS_PRESTAMO } from '../constants/catalogos';
 import { useAuth } from '../context/AuthContext';
 import { useCarga, useDebounce } from '../hooks';
 import { prestamosService } from '../services/prestamosService';
@@ -22,7 +22,13 @@ type Pestana = 'activos' | 'pendientes' | 'historial';
 export function PrestamosPage({ accionInicial }: PrestamosPageProps) {
   const { puedeOperarInventario } = useAuth();
   const { showToast } = useToast();
-  const [pestana, setPestana] = useState<Pestana>('activos');
+  const pestanaInicial: Pestana =
+    accionInicial === 'historial'
+      ? 'historial'
+      : accionInicial === 'pendientes' && puedeOperarInventario
+        ? 'pendientes'
+        : 'activos';
+  const [pestana, setPestana] = useState<Pestana>(pestanaInicial);
   const [busqueda, setBusqueda] = useState('');
   const [estado, setEstado] = useState('');
   const [area, setArea] = useState('');
@@ -36,7 +42,11 @@ export function PrestamosPage({ accionInicial }: PrestamosPageProps) {
   const [aprobando, setAprobando] = useState(false);
 
   const estadoFiltroActual =
-    pestana === 'activos' ? 'Activo' : pestana === 'pendientes' ? 'Pendiente' : estado;
+    pestana === 'activos'
+      ? ESTADO_PRESTAMO.ACTIVO
+      : pestana === 'pendientes'
+        ? ESTADO_PRESTAMO.PENDIENTE
+        : estado;
 
   const { datos: prestamos, cargando, error, recargar } = useCarga<PrestamoDto[]>(
     () =>
@@ -86,9 +96,9 @@ export function PrestamosPage({ accionInicial }: PrestamosPageProps) {
       key: 'acciones',
       header: 'Acción',
       render: (p) =>
-        p.estadoPrestamo === 'Pendiente' ? (
+        p.estadoPrestamo === ESTADO_PRESTAMO.PENDIENTE ? (
           <Button size="sm" variant="primary" leftIcon={<CheckCircle2 className="h-3.5 w-3.5" />} onClick={() => setPrestamoAprobar(p)}>Aprobar</Button>
-        ) : p.estadoPrestamo === 'Activo' ? (
+        ) : p.estadoPrestamo === ESTADO_PRESTAMO.ACTIVO ? (
           <Button size="sm" variant="success" leftIcon={<RotateCcw className="h-3.5 w-3.5" />} onClick={() => setPrestamoDevolucion(p)}>Devolver</Button>
         ) : (
           <span className="text-xs text-slate-400" title={p.observacionDevolucion ?? ''}>Cerrado</span>
@@ -106,6 +116,17 @@ export function PrestamosPage({ accionInicial }: PrestamosPageProps) {
         ['activos', 'Préstamos activos (RF-12)'],
         ['historial', 'Historial completo (RF-11)'],
       ];
+
+  const manejarTeclaPestana = (e: React.KeyboardEvent<HTMLButtonElement>, indiceActual: number) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const total = pestanasDisponibles.length;
+    const siguienteIndice =
+      e.key === 'ArrowRight' ? (indiceActual + 1) % total : (indiceActual - 1 + total) % total;
+    const [siguienteId] = pestanasDisponibles[siguienteIndice];
+    setPestana(siguienteId);
+    document.getElementById(`tab-prestamos-${siguienteId}`)?.focus();
+  };
 
   return (
     <div className="space-y-5">
@@ -131,44 +152,71 @@ export function PrestamosPage({ accionInicial }: PrestamosPageProps) {
       </div>
 
       <div role="tablist" aria-label="Vistas de préstamos" className="flex gap-1 border-b border-slate-200 dark:border-slate-800">
-        {pestanasDisponibles.map(([id, label]) => (
-          <button key={id} role="tab" aria-selected={pestana === id} type="button" onClick={() => setPestana(id)} className={`cursor-pointer border-b-2 px-4 py-2 text-sm font-semibold ${pestana === id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}>
+        {pestanasDisponibles.map(([id, label], idx) => (
+          <button
+            key={id}
+            id={`tab-prestamos-${id}`}
+            role="tab"
+            aria-selected={pestana === id}
+            aria-controls={`tabpanel-prestamos-${id}`}
+            tabIndex={pestana === id ? 0 : -1}
+            type="button"
+            onClick={() => setPestana(id)}
+            onKeyDown={(e) => manejarTeclaPestana(e, idx)}
+            className={`cursor-pointer border-b-2 px-4 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${pestana === id ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+          >
             {id === 'pendientes' ? <Clock className="mr-1.5 inline h-4 w-4" /> : <ArrowLeftRight className="mr-1.5 inline h-4 w-4" />}{label}
           </button>
         ))}
       </div>
 
-      <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-6 dark:border-slate-800 dark:bg-slate-900">
-        <FormField label="Buscar" htmlFor="p-busqueda" className="lg:col-span-2">
-          <Input id="p-busqueda" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Equipo, colaborador, código…" prefixIcon={<Search className="h-4 w-4" />} />
-        </FormField>
-        {pestana === 'historial' && (
-          <FormField label="Estado" htmlFor="p-estado">
-            <Select id="p-estado" value={estado} onChange={(e) => setEstado(e.target.value)} placeholder="Todos" options={[{ value: 'Pendiente', label: 'Pendiente' }, { value: 'Activo', label: 'Activo' }, { value: 'Devuelto', label: 'Devuelto' }]} />
+      <div
+        id={`tabpanel-prestamos-${pestana}`}
+        role="tabpanel"
+        aria-labelledby={`tab-prestamos-${pestana}`}
+        className="space-y-5"
+      >
+        <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-6 dark:border-slate-800 dark:bg-slate-900">
+          <FormField label="Buscar" htmlFor="p-busqueda" className="lg:col-span-2">
+            <Input id="p-busqueda" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Equipo, colaborador, código…" prefixIcon={<Search className="h-4 w-4" />} />
           </FormField>
-        )}
-        <FormField label="Área" htmlFor="p-area">
-          <Select id="p-area" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Todas" options={AREAS_ORGANIZACION.map((a) => ({ value: a, label: a }))} />
-        </FormField>
-        <FormField label="Desde" htmlFor="p-desde"><DatePicker id="p-desde" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} /></FormField>
-        <FormField label="Hasta" htmlFor="p-hasta"><DatePicker id="p-hasta" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} /></FormField>
-        <div className="flex items-end"><Button variant="secondary" fullWidth leftIcon={<RefreshCw className="h-4 w-4" />} onClick={limpiar}>Limpiar</Button></div>
+          {pestana === 'historial' && (
+            <FormField label="Estado" htmlFor="p-estado">
+              <Select id="p-estado" value={estado} onChange={(e) => setEstado(e.target.value)} placeholder="Todos" options={ESTADOS_PRESTAMO.map((est) => ({ value: est, label: est }))} />
+            </FormField>
+          )}
+          <FormField label="Área" htmlFor="p-area">
+            <Select id="p-area" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Todas" options={AREAS_ORGANIZACION.map((a) => ({ value: a, label: a }))} />
+          </FormField>
+          <FormField label="Desde" htmlFor="p-desde"><DatePicker id="p-desde" value={fechaDesde} onChange={(e) => setFechaDesde(e.target.value)} /></FormField>
+          <FormField label="Hasta" htmlFor="p-hasta"><DatePicker id="p-hasta" value={fechaHasta} onChange={(e) => setFechaHasta(e.target.value)} /></FormField>
+          <div className="flex items-end"><Button variant="secondary" fullWidth leftIcon={<RefreshCw className="h-4 w-4" />} onClick={limpiar}>Limpiar</Button></div>
+        </div>
+
+        {error && <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error} <button type="button" className="cursor-pointer font-semibold underline" onClick={() => void recargar()}>Reintentar</button></div>}
+
+        <DataTable
+          data={prestamos}
+          columns={columnas}
+          rowKey={(p) => p.id}
+          loading={cargando}
+          emptyTitle={pestana === 'activos' ? 'No hay préstamos activos' : pestana === 'pendientes' ? 'No hay solicitudes pendientes' : 'Sin préstamos para mostrar'}
+          emptyDescription="Registre un nuevo préstamo o ajuste los filtros."
+          emptyActionLabel={puedeOperarInventario ? 'Registrar préstamo' : 'Solicitar préstamo'}
+          onEmptyAction={() => setFormAbierto(true)}
+        />
       </div>
 
-      {error && <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error} <button type="button" className="cursor-pointer font-semibold underline" onClick={() => void recargar()}>Reintentar</button></div>}
-
-      <DataTable
-        data={prestamos}
-        columns={columnas}
-        rowKey={(p) => p.id}
-        loading={cargando}
-        emptyTitle={pestana === 'activos' ? 'No hay préstamos activos' : pestana === 'pendientes' ? 'No hay solicitudes pendientes' : 'Sin préstamos para mostrar'}
-        emptyDescription="Registre un nuevo préstamo o ajuste los filtros."
-        emptyActionLabel={puedeOperarInventario ? 'Registrar préstamo' : 'Solicitar préstamo'}
-        onEmptyAction={() => setFormAbierto(true)}
+      <PrestamoFormModal
+        open={formAbierto}
+        onClose={() => setFormAbierto(false)}
+        onGuardado={() => {
+          if (!puedeOperarInventario) {
+            setPestana('historial');
+          }
+          void recargar();
+        }}
       />
-
-      <PrestamoFormModal open={formAbierto} onClose={() => setFormAbierto(false)} onGuardado={() => void recargar()} />
       <DevolucionModal prestamo={prestamoDevolucion} onClose={() => setPrestamoDevolucion(null)} onGuardado={() => void recargar()} />
       <ConfirmDialog
         open={Boolean(prestamoAprobar)}

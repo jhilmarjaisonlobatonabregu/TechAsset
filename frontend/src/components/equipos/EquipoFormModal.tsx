@@ -22,12 +22,21 @@ export function EquipoFormModal({ open, equipo, onClose, onGuardado }: EquipoFor
   const { showToast } = useToast();
   const [errorServidor, setErrorServidor] = useState<string | null>(null);
   const esEdicion = equipo !== null;
+  const esEquipoPrestado = equipo?.estado === 'Prestado';
+  const opcionesEstado = esEquipoPrestado
+    ? ESTADOS_EQUIPO
+    : ESTADOS_EQUIPO.filter((e) => e !== 'Prestado');
+
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<EquipoFormValues>({ resolver: zodResolver(equipoSchema), defaultValues: VALORES_VACIOS });
+  } = useForm<EquipoFormValues>({
+    resolver: zodResolver(equipoSchema),
+    defaultValues: VALORES_VACIOS,
+    mode: 'onTouched',
+  });
 
   useEffect(() => {
     if (open) {
@@ -95,7 +104,7 @@ export function EquipoFormModal({ open, equipo, onClose, onGuardado }: EquipoFor
           </datalist>
         </FormField>
         <FormField label="Estado" htmlFor="eq-estado" required error={errors.estado?.message} helperText="Un equipo «Prestado» solo cambia mediante la devolución del préstamo.">
-          <Select id="eq-estado" options={ESTADOS_EQUIPO.map((e) => ({ value: e, label: e }))} hasError={Boolean(errors.estado)} {...register('estado')} />
+          <Select id="eq-estado" disabled={esEquipoPrestado} options={opcionesEstado.map((e) => ({ value: e, label: e }))} hasError={Boolean(errors.estado)} {...register('estado')} />
         </FormField>
       </form>
     </Modal>

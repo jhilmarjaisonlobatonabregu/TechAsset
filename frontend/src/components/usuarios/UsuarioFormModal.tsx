@@ -27,7 +27,11 @@ export function UsuarioFormModal({ open, usuario, onClose, onGuardado }: Usuario
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<UsuarioFormValues>({ resolver: zodResolver(crearUsuarioSchema(esEdicion)), defaultValues: VACIO });
+  } = useForm<UsuarioFormValues>({
+    resolver: zodResolver(crearUsuarioSchema(esEdicion)),
+    defaultValues: VACIO,
+    mode: 'onTouched',
+  });
 
   useEffect(() => {
     if (open) {

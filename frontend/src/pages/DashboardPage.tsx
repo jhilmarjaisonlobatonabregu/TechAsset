@@ -4,7 +4,7 @@ import { useCarga } from '../hooks';
 import { useAuth } from '../context/AuthContext';
 import { dashboardService } from '../services/dashboardService';
 import type { DashboardDto, VistaNavegacion } from '../types';
-import { formatFechaHora } from '../utils/formatters';
+import { formatFechaHora, formatTipoMovimiento } from '../utils/formatters';
 
 const COLORES_ESTADO: Record<string, string> = {
   Disponible: '#10b981',
@@ -60,7 +60,7 @@ export function DashboardPage({ onNavegar }: DashboardPageProps) {
             </Button>
           )}
           <Button size="sm" variant="secondary" leftIcon={<ArrowLeftRight className="h-4 w-4" />} onClick={() => onNavegar('prestamos', 'nuevo')}>
-            Nuevo préstamo
+            {puedeOperarInventario ? 'Registrar préstamo' : 'Solicitar préstamo'}
           </Button>
           {esAdmin && (
             <Button size="sm" variant="outline" leftIcon={<UserPlus className="h-4 w-4" />} onClick={() => onNavegar('usuarios', 'nuevo')}>
@@ -71,12 +71,12 @@ export function DashboardPage({ onNavegar }: DashboardPageProps) {
       </div>
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-label="Indicadores principales">
-        <StatCard title="Total de equipos" value={d.totalEquipos} subtitle={`${d.equiposDeBaja} en baja`} icon={<Laptop className="h-5 w-5" />} accent="blue" />
-        <StatCard title="Equipos disponibles" value={d.equiposDisponibles} subtitle="Listos para préstamo" icon={<CheckCircle2 className="h-5 w-5" />} accent="emerald" />
-        <StatCard title="Equipos prestados" value={d.equiposPrestados} subtitle={`${d.prestamosActivos} préstamos activos`} icon={<Users className="h-5 w-5" />} accent="purple" />
-        <StatCard title="Equipos en mantenimiento" value={d.equiposEnMantenimiento} subtitle="No prestables (RN-02)" icon={<Wrench className="h-5 w-5" />} accent="amber" />
-        <StatCard title="Total de préstamos" value={d.totalPrestamos} subtitle={`${d.prestamosDevueltos} devueltos`} icon={<ArrowLeftRight className="h-5 w-5" />} accent="teal" />
-        <StatCard title="Área con mayor uso" value={d.areaConMayorUso || '—'} subtitle={`${d.prestamosAreaMayorUso} préstamos`} icon={<Building className="h-5 w-5" />} accent="rose" />
+        <StatCard title="Total de equipos" value={d.totalEquipos} subtitle={`${d.equiposDeBaja} en baja`} icon={<Laptop className="h-5 w-5" />} accent="blue" onClick={() => onNavegar('equipos', 'estado:')} />
+        <StatCard title="Equipos disponibles" value={d.equiposDisponibles} subtitle="Listos para préstamo" icon={<CheckCircle2 className="h-5 w-5" />} accent="emerald" onClick={() => onNavegar('equipos', 'estado:Disponible')} />
+        <StatCard title="Equipos prestados" value={d.equiposPrestados} subtitle={`${d.prestamosActivos} préstamos activos`} icon={<Users className="h-5 w-5" />} accent="purple" onClick={() => onNavegar('prestamos', 'activos')} />
+        <StatCard title="Equipos en mantenimiento" value={d.equiposEnMantenimiento} subtitle="No prestables (RN-02)" icon={<Wrench className="h-5 w-5" />} accent="amber" onClick={() => onNavegar('equipos', 'estado:Mantenimiento')} />
+        <StatCard title="Total de préstamos" value={d.totalPrestamos} subtitle={`${d.prestamosDevueltos} devueltos`} icon={<ArrowLeftRight className="h-5 w-5" />} accent="teal" onClick={() => onNavegar('prestamos', 'historial')} />
+        <StatCard title="Área con mayor uso" value={d.areaConMayorUso || '—'} subtitle={`${d.prestamosAreaMayorUso} préstamos`} icon={<Building className="h-5 w-5" />} accent="rose" onClick={puedeOperarInventario ? () => onNavegar('reportes', 'area') : undefined} />
       </section>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -146,7 +146,7 @@ export function DashboardPage({ onNavegar }: DashboardPageProps) {
             <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
               <div className="min-w-0">
                 <p className="truncate font-medium text-slate-800 dark:text-slate-100">
-                  {m.tipoMovimiento} · {m.equipoCodigo} — {m.equipoNombre}
+                  {formatTipoMovimiento(m.tipoMovimiento)} · {m.equipoCodigo} — {m.equipoNombre}
                 </p>
                 <p className="truncate text-xs text-slate-500">{m.observacion}</p>
               </div>
