@@ -38,7 +38,7 @@ public class Equipo
         {
             throw new ReglaNegocioException(
                 "RN-01",
-                "RN-01: Un equipo solo puede estar asociado a un préstamo activo.",
+                MensajesRegla.Rn01EquipoConPrestamoActivo,
                 409);
         }
     }
@@ -90,5 +90,29 @@ public class Equipo
         {
             CambiarEstado(nuevoEstado);
         }
+    }
+
+    public void DarDeBajaLogica(bool aplicarBajaLogica)
+    {
+        var tienePrestamoActivo = Prestamos.Any(p => p.EstadoPrestamo == EstadosPrestamo.Activo) ||
+                                  string.Equals(Estado, EstadosEquipo.Prestado, StringComparison.OrdinalIgnoreCase);
+
+        if (tienePrestamoActivo)
+        {
+            throw new ReglaNegocioException(
+                "RN-01",
+                "RN-01: No se puede eliminar ni dar de baja un equipo que tiene un préstamo activo.",
+                409);
+        }
+
+        if (Prestamos.Count > 0 && !aplicarBajaLogica)
+        {
+            throw new ReglaNegocioException(
+                "RN-06",
+                "RN-06: No se puede eliminar un equipo con historial de préstamos. Utilice la baja lógica cambiando su estado a 'Baja'.",
+                409);
+        }
+
+        Estado = EstadosEquipo.Baja;
     }
 }

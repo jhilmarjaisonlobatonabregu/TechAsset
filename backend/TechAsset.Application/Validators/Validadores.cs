@@ -27,7 +27,7 @@ public class CrearUsuarioValidator : AbstractValidator<CrearUsuarioDto>
 
         RuleFor(x => x.Rol)
             .NotEmpty().WithMessage("El rol del usuario es obligatorio.")
-            .Must(rol => Roles.Todos.Contains(rol.Trim()))
+            .Must(rol => !string.IsNullOrWhiteSpace(rol) && Roles.Todos.Contains(rol.Trim()))
             .WithMessage($"El rol debe ser uno de: {string.Join(", ", Roles.Todos)}.");
     }
 }
@@ -55,7 +55,7 @@ public class ActualizarUsuarioValidator : AbstractValidator<ActualizarUsuarioDto
 
         RuleFor(x => x.Rol)
             .NotEmpty().WithMessage("El rol del usuario es obligatorio.")
-            .Must(rol => Roles.Todos.Contains(rol.Trim()))
+            .Must(rol => !string.IsNullOrWhiteSpace(rol) && Roles.Todos.Contains(rol.Trim()))
             .WithMessage($"El rol debe ser uno de: {string.Join(", ", Roles.Todos)}.");
     }
 }
@@ -75,12 +75,19 @@ public class CrearEquipoValidator : AbstractValidator<CrearEquipoDto>
         RuleFor(x => x.Categoria)
             .NotEmpty().WithMessage("La categoría del equipo es obligatoria.")
             .MaximumLength(50).WithMessage("La categoría no puede exceder 50 caracteres.")
-            .Must(cat => CategoriasEquipo.Todas.Contains(cat.Trim()))
+            .Must(cat => !string.IsNullOrWhiteSpace(cat) && CategoriasEquipo.Todas.Contains(cat.Trim()))
             .WithMessage($"La categoría debe ser una de: {string.Join(", ", CategoriasEquipo.Todas)}.");
 
         RuleFor(x => x.Marca)
             .NotEmpty().WithMessage("La marca del equipo es obligatoria.")
             .MaximumLength(50).WithMessage("La marca no puede exceder 50 caracteres.");
+
+        When(x => !string.IsNullOrWhiteSpace(x.Estado), () =>
+        {
+            RuleFor(x => x.Estado!)
+                .Must(est => EstadosEquipo.Todos.Contains(est.Trim()))
+                .WithMessage($"El estado debe ser uno de: {string.Join(", ", EstadosEquipo.Todos)}.");
+        });
     }
 }
 
@@ -99,7 +106,7 @@ public class ActualizarEquipoValidator : AbstractValidator<ActualizarEquipoDto>
         RuleFor(x => x.Categoria)
             .NotEmpty().WithMessage("La categoría del equipo es obligatoria.")
             .MaximumLength(50).WithMessage("La categoría no puede exceder 50 caracteres.")
-            .Must(cat => CategoriasEquipo.Todas.Contains(cat.Trim()))
+            .Must(cat => !string.IsNullOrWhiteSpace(cat) && CategoriasEquipo.Todas.Contains(cat.Trim()))
             .WithMessage($"La categoría debe ser una de: {string.Join(", ", CategoriasEquipo.Todas)}.");
 
         RuleFor(x => x.Marca)
@@ -108,7 +115,7 @@ public class ActualizarEquipoValidator : AbstractValidator<ActualizarEquipoDto>
 
         RuleFor(x => x.Estado)
             .NotEmpty().WithMessage("El estado del equipo es obligatorio.")
-            .Must(est => EstadosEquipo.Todos.Contains(est.Trim()))
+            .Must(est => !string.IsNullOrWhiteSpace(est) && EstadosEquipo.Todos.Contains(est.Trim()))
             .WithMessage($"El estado debe ser uno de: {string.Join(", ", EstadosEquipo.Todos)}.");
     }
 }
@@ -125,11 +132,11 @@ public class CrearPrestamoValidator : AbstractValidator<CrearPrestamoDto>
 
         RuleFor(x => x.ResponsableId)
             .Must(r => r is null || r != Guid.Empty)
-            .WithMessage("RN-05: Todo préstamo debe tener un usuario responsable registrado.");
+            .WithMessage(MensajesRegla.Rn05ResponsableRegistrado);
 
         RuleFor(x => x.FechaDevolucion)
             .GreaterThan(x => x.FechaPrestamo)
-            .WithMessage("RN-04: La fecha de devolución debe ser posterior a la fecha de préstamo.");
+            .WithMessage(MensajesRegla.Rn04DevolucionPosteriorAPrestamo);
     }
 }
 
@@ -138,6 +145,6 @@ public class RegistrarDevolucionValidator : AbstractValidator<RegistrarDevolucio
     public RegistrarDevolucionValidator()
     {
         RuleFor(x => x.Observacion)
-            .NotEmpty().WithMessage("RN-10: Toda devolución deberá registrar observaciones.");
+            .NotEmpty().WithMessage(MensajesRegla.Rn10DevolucionConObservacion);
     }
 }

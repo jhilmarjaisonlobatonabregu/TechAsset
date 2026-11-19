@@ -75,3 +75,22 @@ public static class TiposMovimiento
     public const string CambioEstado = "CambioEstado";
     public const string BajaLogica = "BajaLogica";
 }
+
+public static class Areas
+{
+    public const string InfraestructuraSoporte = "Infraestructura y Soporte";
+}
+
+public static class CredencialesPorDefecto
+{
+    public const string ContrasenaColaborador = "Colab2026!";
+}
+
+public static class MensajesRegla
+{
+    public const string Rn01EquipoConPrestamoActivo = "RN-01: Un equipo solo puede estar asociado a un préstamo activo.";
+    public const string Rn04DevolucionPosteriorAPrestamo = "RN-04: La fecha de devolución debe ser posterior a la fecha de préstamo.";
+    public const string Rn05ResponsableRegistrado = "RN-05: Todo préstamo debe tener un usuario responsable registrado.";
+    public const string Rn05ResponsableValidoYActivo = "RN-05: Todo préstamo debe tener un usuario responsable válido y activo registrado.";
+    public const string Rn10DevolucionConObservacion = "RN-10: Toda devolución deberá registrar observaciones.";
+}

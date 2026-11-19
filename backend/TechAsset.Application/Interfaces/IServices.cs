@@ -6,7 +6,6 @@ public interface IAuthService
 {
     Task<LoginResponseDto> LoginAsync(LoginRequestDto request, CancellationToken ct = default);
     Task<UsuarioSesionDto> ObtenerPerfilActualAsync(Guid usuarioId, CancellationToken ct = default);
-    Task<IReadOnlyList<DemoUserDto>> ObtenerUsuariosDemoAsync(CancellationToken ct = default);
 }
 
 public interface IUsuarioService

@@ -10,6 +10,8 @@ namespace TechAsset.Infrastructure.Services;
 
 public class PrestamoService : IPrestamoService
 {
+    private const string MensajePrestamoNoExiste = "El préstamo indicado no existe.";
+
     private readonly TechAssetDbContext _db;
 
     public PrestamoService(TechAssetDbContext db)
@@ -115,35 +117,68 @@ public class PrestamoService : IPrestamoService
         Usuario? responsable = null;
         if (!esSolicitudColaborador)
         {
-            // RN-05: Todo préstamo debe tener un usuario responsable registrado
-            if (!dto.ResponsableId.HasValue || dto.ResponsableId.Value == Guid.Empty)
-            {
-                throw new ReglaNegocioException(
-                    "RN-05",
-                    "RN-05: Todo préstamo debe tener un usuario responsable registrado.",
-                    400);
-            }
-
-            responsable = await _db.Usuarios.FirstOrDefaultAsync(u => u.Id == dto.ResponsableId.Value, ct);
-            if (responsable is null || !responsable.Estado)
-            {
-                throw new ReglaNegocioException(
-                    "RN-05",
-                    "RN-05: Todo préstamo debe tener un usuario responsable válido y activo registrado.",
-                    400);
-            }
+            responsable = await ObtenerResponsableDelPrestamoAsync(dto.ResponsableId, ct);
         }
 
-        // RN-04: La fecha de devolución debe ser posterior a la fecha de préstamo
-        if (dto.FechaDevolucion <= dto.FechaPrestamo)
+        var usuario = await ObtenerUsuarioReceptorAsync(dto.UsuarioId, ct);
+        var equipo = await ObtenerEquipoPrestableAsync(dto.EquipoId, ct);
+
+        return esSolicitudColaborador
+            ? await CrearSolicitudPendienteAsync(dto, usuario, equipo, ct)
+            : await CrearPrestamoActivoAsync(dto, usuario, equipo, responsable!, ct);
+    }
+
+    public async Task<PrestamoDto> AprobarPrestamoAsync(
+        Guid prestamoId,
+        Guid responsableId,
+        string? rolActor = null,
+        CancellationToken ct = default)
+    {
+        ValidarRolAprobador(rolActor);
+        var responsable = await ObtenerResponsableAprobadorAsync(responsableId, ct);
+        var prestamo = await ObtenerSolicitudPendienteAsync(prestamoId, ct);
+        var equipo = await ObtenerEquipoParaAprobacionAsync(prestamo, ct);
+
+        var estadoAnteriorEquipo = equipo.Estado;
+        equipo.MarcarComoPrestado();
+        prestamo.Aprobar(responsable.Id);
+        prestamo.Responsable = responsable;
+
+        var nombreUsuario = prestamo.Usuario?.NombreCompleto ?? Roles.Colaborador;
+        var areaUsuario = prestamo.Usuario?.Area ?? Areas.InfraestructuraSoporte;
+
+        _db.MovimientosInventario.Add(NuevoMovimientoPrestamo(
+            equipo,
+            estadoAnteriorEquipo,
+            prestamo.UsuarioId,
+            responsable.Id,
+            areaUsuario,
+            $"Préstamo aprobado y asignado a {nombreUsuario} ({areaUsuario}). {prestamo.Observacion}"));
+
+        await _db.SaveChangesAsync(ct);
+        return MapearDto(prestamo);
+    }
+
+    private async Task<Usuario> ObtenerResponsableDelPrestamoAsync(Guid? responsableId, CancellationToken ct)
+    {
+        Prestamo.ValidarResponsableId(responsableId);
+        return await BuscarResponsableActivoAsync(responsableId!.Value, ct);
+    }
+
+    private async Task<Usuario> BuscarResponsableActivoAsync(Guid responsableId, CancellationToken ct)
+    {
+        var responsable = await _db.Usuarios.FirstOrDefaultAsync(u => u.Id == responsableId, ct);
+        if (responsable is null || !responsable.Estado)
         {
-            throw new ReglaNegocioException(
-                "RN-04",
-                "RN-04: La fecha de devolución debe ser posterior a la fecha de préstamo.",
-                400);
+            throw new ReglaNegocioException("RN-05", MensajesRegla.Rn05ResponsableValidoYActivo, 400);
         }
 
-        var usuario = await _db.Usuarios.FirstOrDefaultAsync(u => u.Id == dto.UsuarioId, ct);
+        return responsable;
+    }
+
+    private async Task<Usuario> ObtenerUsuarioReceptorAsync(Guid usuarioId, CancellationToken ct)
+    {
+        var usuario = await _db.Usuarios.FirstOrDefaultAsync(u => u.Id == usuarioId, ct);
         if (usuario is null)
         {
             throw new ReglaNegocioException("USR-404", "El colaborador receptor seleccionado no existe.", 404);
@@ -157,7 +192,12 @@ public class PrestamoService : IPrestamoService
                 422);
         }
 
-        var equipo = await _db.Equipos.FirstOrDefaultAsync(e => e.Id == dto.EquipoId, ct);
+        return usuario;
+    }
+
+    private async Task<Equipo> ObtenerEquipoPrestableAsync(Guid equipoId, CancellationToken ct)
+    {
+        var equipo = await _db.Equipos.FirstOrDefaultAsync(e => e.Id == equipoId, ct);
         if (equipo is null)
         {
             throw new ReglaNegocioException("EQP-404", "El equipo tecnológico seleccionado no existe.", 404);
@@ -165,64 +205,65 @@ public class PrestamoService : IPrestamoService
 
         // RN-02, RN-03, RN-01 sobre el estado del equipo
         equipo.ValidarDisponibleParaPrestamo();
+        await ValidarSinPrestamoActivoAsync(equipo.Id, Guid.Empty, ct);
+        return equipo;
+    }
 
-        // Verificación adicional RN-01 en tabla de préstamos activos
+    // Verificación adicional RN-01 en la tabla de préstamos activos
+    private async Task ValidarSinPrestamoActivoAsync(Guid equipoId, Guid prestamoExcluidoId, CancellationToken ct)
+    {
         var tienePrestamoActivo = await _db.Prestamos.AnyAsync(
-            p => p.EquipoId == dto.EquipoId && p.EstadoPrestamo == EstadosPrestamo.Activo,
+            p => p.EquipoId == equipoId && p.EstadoPrestamo == EstadosPrestamo.Activo && p.Id != prestamoExcluidoId,
             ct);
 
         if (tienePrestamoActivo)
         {
-            throw new ReglaNegocioException(
-                "RN-01",
-                "RN-01: Un equipo solo puede estar asociado a un préstamo activo.",
-                409);
+            throw new ReglaNegocioException("RN-01", MensajesRegla.Rn01EquipoConPrestamoActivo, 409);
         }
+    }
 
-        if (esSolicitudColaborador)
-        {
-            var solicitud = Prestamo.CrearSolicitud(
-                dto.EquipoId,
-                dto.UsuarioId,
-                dto.FechaPrestamo,
-                dto.FechaDevolucion,
-                dto.Observacion);
-
-            _db.Prestamos.Add(solicitud);
-            await _db.SaveChangesAsync(ct);
-
-            solicitud.Usuario = usuario;
-            solicitud.Equipo = equipo;
-
-            return MapearDto(solicitud);
-        }
-
-        var estadoAnteriorEquipo = equipo.Estado;
-        equipo.MarcarComoPrestado();
-
-        var prestamo = Prestamo.Crear(
+    private async Task<PrestamoDto> CrearSolicitudPendienteAsync(
+        CrearPrestamoDto dto, Usuario usuario, Equipo equipo, CancellationToken ct)
+    {
+        var solicitud = Prestamo.CrearSolicitud(
             dto.EquipoId,
             dto.UsuarioId,
-            responsable!.Id,
             dto.FechaPrestamo,
             dto.FechaDevolucion,
             dto.Observacion);
 
+        _db.Prestamos.Add(solicitud);
+        await _db.SaveChangesAsync(ct);
+
+        solicitud.Usuario = usuario;
+        solicitud.Equipo = equipo;
+
+        return MapearDto(solicitud);
+    }
+
+    private async Task<PrestamoDto> CrearPrestamoActivoAsync(
+        CrearPrestamoDto dto, Usuario usuario, Equipo equipo, Usuario responsable, CancellationToken ct)
+    {
+        var prestamo = Prestamo.Crear(
+            dto.EquipoId,
+            dto.UsuarioId,
+            responsable.Id,
+            dto.FechaPrestamo,
+            dto.FechaDevolucion,
+            dto.Observacion);
+
+        var estadoAnteriorEquipo = equipo.Estado;
+        equipo.MarcarComoPrestado();
+
         _db.Prestamos.Add(prestamo);
 
-        _db.MovimientosInventario.Add(new MovimientoInventario
-        {
-            Id = Guid.NewGuid(),
-            Fecha = DateTime.UtcNow,
-            TipoMovimiento = TiposMovimiento.Prestamo,
-            EquipoId = equipo.Id,
-            EstadoAnterior = estadoAnteriorEquipo,
-            EstadoNuevo = EstadosEquipo.Prestado,
-            UsuarioId = usuario.Id,
-            ResponsableId = responsable.Id,
-            Area = usuario.Area,
-            Observacion = $"Préstamo asignado a {usuario.NombreCompleto} ({usuario.Area}). {prestamo.Observacion}"
-        });
+        _db.MovimientosInventario.Add(NuevoMovimientoPrestamo(
+            equipo,
+            estadoAnteriorEquipo,
+            usuario.Id,
+            responsable.Id,
+            usuario.Area,
+            $"Préstamo asignado a {usuario.NombreCompleto} ({usuario.Area}). {prestamo.Observacion}"));
 
         await _db.SaveChangesAsync(ct);
 
@@ -233,11 +274,22 @@ public class PrestamoService : IPrestamoService
         return MapearDto(prestamo);
     }
 
-    public async Task<PrestamoDto> AprobarPrestamoAsync(
-        Guid prestamoId,
-        Guid responsableId,
-        string? rolActor = null,
-        CancellationToken ct = default)
+    private static MovimientoInventario NuevoMovimientoPrestamo(
+        Equipo equipo, string estadoAnterior, Guid usuarioId, Guid responsableId, string area, string observacion) => new()
+    {
+        Id = Guid.NewGuid(),
+        Fecha = DateTime.UtcNow,
+        TipoMovimiento = TiposMovimiento.Prestamo,
+        EquipoId = equipo.Id,
+        EstadoAnterior = estadoAnterior,
+        EstadoNuevo = EstadosEquipo.Prestado,
+        UsuarioId = usuarioId,
+        ResponsableId = responsableId,
+        Area = area,
+        Observacion = observacion
+    };
+
+    private static void ValidarRolAprobador(string? rolActor)
     {
         if (!string.IsNullOrWhiteSpace(rolActor) &&
             !string.Equals(rolActor, Roles.Administrador, StringComparison.OrdinalIgnoreCase) &&
@@ -248,24 +300,13 @@ public class PrestamoService : IPrestamoService
                 "Solo el Administrador o el Responsable de Tecnología pueden aprobar préstamos.",
                 403);
         }
+    }
 
-        if (responsableId == Guid.Empty)
-        {
-            throw new ReglaNegocioException(
-                "RN-05",
-                "RN-05: Todo préstamo debe tener un usuario responsable registrado.",
-                400);
-        }
+    private async Task<Usuario> ObtenerResponsableAprobadorAsync(Guid responsableId, CancellationToken ct)
+    {
+        Prestamo.ValidarResponsableId(responsableId);
 
-        var responsable = await _db.Usuarios.FirstOrDefaultAsync(u => u.Id == responsableId, ct);
-        if (responsable is null || !responsable.Estado)
-        {
-            throw new ReglaNegocioException(
-                "RN-05",
-                "RN-05: Todo préstamo debe tener un usuario responsable válido y activo registrado.",
-                400);
-        }
-
+        var responsable = await BuscarResponsableActivoAsync(responsableId, ct);
         if (string.Equals(responsable.Rol, Roles.Colaborador, StringComparison.OrdinalIgnoreCase))
         {
             throw new ReglaNegocioException(
@@ -274,6 +315,11 @@ public class PrestamoService : IPrestamoService
                 403);
         }
 
+        return responsable;
+    }
+
+    private async Task<Prestamo> ObtenerSolicitudPendienteAsync(Guid prestamoId, CancellationToken ct)
+    {
         var prestamo = await _db.Prestamos
             .Include(p => p.Equipo)
             .Include(p => p.Usuario)
@@ -282,17 +328,16 @@ public class PrestamoService : IPrestamoService
 
         if (prestamo is null)
         {
-            throw new ReglaNegocioException("PRE-404", "El préstamo indicado no existe.", 404);
+            throw new ReglaNegocioException("PRE-404", MensajePrestamoNoExiste, 404);
         }
 
-        if (!string.Equals(prestamo.EstadoPrestamo, EstadosPrestamo.Pendiente, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ReglaNegocioException(
-                "VAL-APROBACION",
-                "Solo se puede aprobar un préstamo que se encuentre en estado 'Pendiente'.",
-                409);
-        }
+        prestamo.ValidarPendienteParaAprobacion();
 
+        return prestamo;
+    }
+
+    private async Task<Equipo> ObtenerEquipoParaAprobacionAsync(Prestamo prestamo, CancellationToken ct)
+    {
         var equipo = prestamo.Equipo ?? await _db.Equipos.FirstOrDefaultAsync(e => e.Id == prestamo.EquipoId, ct);
         if (equipo is null)
         {
@@ -301,43 +346,8 @@ public class PrestamoService : IPrestamoService
 
         // Revalidar RN-01, RN-02 y RN-03 antes de aprobar
         equipo.ValidarDisponibleParaPrestamo();
-
-        var tienePrestamoActivo = await _db.Prestamos.AnyAsync(
-            p => p.EquipoId == equipo.Id && p.EstadoPrestamo == EstadosPrestamo.Activo && p.Id != prestamo.Id,
-            ct);
-
-        if (tienePrestamoActivo)
-        {
-            throw new ReglaNegocioException(
-                "RN-01",
-                "RN-01: Un equipo solo puede estar asociado a un préstamo activo.",
-                409);
-        }
-
-        var estadoAnteriorEquipo = equipo.Estado;
-        equipo.MarcarComoPrestado();
-        prestamo.Aprobar(responsable.Id);
-        prestamo.Responsable = responsable;
-
-        var nombreUsuario = prestamo.Usuario?.NombreCompleto ?? "Colaborador";
-        var areaUsuario = prestamo.Usuario?.Area ?? "Infraestructura y Soporte";
-
-        _db.MovimientosInventario.Add(new MovimientoInventario
-        {
-            Id = Guid.NewGuid(),
-            Fecha = DateTime.UtcNow,
-            TipoMovimiento = TiposMovimiento.Prestamo,
-            EquipoId = equipo.Id,
-            EstadoAnterior = estadoAnteriorEquipo,
-            EstadoNuevo = EstadosEquipo.Prestado,
-            UsuarioId = prestamo.UsuarioId,
-            ResponsableId = responsable.Id,
-            Area = areaUsuario,
-            Observacion = $"Préstamo aprobado y asignado a {nombreUsuario} ({areaUsuario}). {prestamo.Observacion}"
-        });
-
-        await _db.SaveChangesAsync(ct);
-        return MapearDto(prestamo);
+        await ValidarSinPrestamoActivoAsync(equipo.Id, prestamo.Id, ct);
+        return equipo;
     }
 
     public async Task<PrestamoDto> RegistrarDevolucionAsync(
@@ -346,15 +356,6 @@ public class PrestamoService : IPrestamoService
         Guid? responsableId = null,
         CancellationToken ct = default)
     {
-        // RN-10: Toda devolución deberá registrar observaciones
-        if (string.IsNullOrWhiteSpace(dto.Observacion))
-        {
-            throw new ReglaNegocioException(
-                "RN-10",
-                "RN-10: Toda devolución deberá registrar observaciones.",
-                400);
-        }
-
         var prestamo = await _db.Prestamos
             .Include(p => p.Equipo)
             .Include(p => p.Usuario)
@@ -363,7 +364,7 @@ public class PrestamoService : IPrestamoService
 
         if (prestamo is null)
         {
-            throw new ReglaNegocioException("PRE-404", "El préstamo indicado no existe.", 404);
+            throw new ReglaNegocioException("PRE-404", MensajePrestamoNoExiste, 404);
         }
 
         prestamo.RegistrarDevolucion(dto.Observacion, dto.FechaDevolucionReal);
@@ -383,7 +384,7 @@ public class PrestamoService : IPrestamoService
                 EstadoNuevo = prestamo.Equipo.Estado,
                 UsuarioId = prestamo.UsuarioId,
                 ResponsableId = responsableId ?? prestamo.ResponsableId,
-                Area = prestamo.Usuario?.Area ?? "Infraestructura y Soporte",
+                Area = prestamo.Usuario?.Area ?? Areas.InfraestructuraSoporte,
                 Observacion = $"Devolución registrada: {prestamo.ObservacionDevolucion}"
             });
         }

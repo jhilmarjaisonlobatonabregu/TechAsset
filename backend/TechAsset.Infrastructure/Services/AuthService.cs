@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TechAsset.Application.DTOs;
 using TechAsset.Application.Interfaces;
-using TechAsset.Domain.Constants;
 using TechAsset.Domain.Entities;
 using TechAsset.Domain.Exceptions;
 using TechAsset.Infrastructure.Persistence;
@@ -58,30 +57,6 @@ public class AuthService : IAuthService
         }
 
         return MapearSesion(usuario);
-    }
-
-    public async Task<IReadOnlyList<DemoUserDto>> ObtenerUsuariosDemoAsync(CancellationToken ct = default)
-    {
-        var usuarios = await _db.Usuarios
-            .AsNoTracking()
-            .Where(u => u.Estado)
-            .OrderBy(u => u.Rol == Roles.Administrador ? 1 : u.Rol == Roles.ResponsableTecnologia ? 2 : 3)
-            .ThenBy(u => u.Nombres)
-            .ToListAsync(ct);
-
-        return usuarios.Select(u => new DemoUserDto
-        {
-            Id = u.Id,
-            Correo = u.Correo,
-            NombreCompleto = u.NombreCompleto,
-            Rol = u.Rol,
-            Area = u.Area,
-            PasswordDemo = u.Rol == Roles.Administrador
-                ? "Admin2026!"
-                : u.Rol == Roles.ResponsableTecnologia
-                    ? "Soporte2026!"
-                    : "Colab2026!"
-        }).ToList();
     }
 
     private static UsuarioSesionDto MapearSesion(Usuario u) => new()

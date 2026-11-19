@@ -32,13 +32,7 @@ public class Prestamo
         DateOnly fechaDevolucion,
         string? observacion)
     {
-        if (responsableId == Guid.Empty)
-        {
-            throw new ReglaNegocioException(
-                "RN-05",
-                "RN-05: Todo préstamo debe tener un usuario responsable registrado.",
-                400);
-        }
+        ValidarResponsableId(responsableId);
 
         if (usuarioId == Guid.Empty)
         {
@@ -56,13 +50,7 @@ public class Prestamo
                 400);
         }
 
-        if (fechaDevolucion <= fechaPrestamo)
-        {
-            throw new ReglaNegocioException(
-                "RN-04",
-                "RN-04: La fecha de devolución debe ser posterior a la fecha de préstamo.",
-                400);
-        }
+        ValidarFechas(fechaPrestamo, fechaDevolucion);
 
         return new Prestamo
         {
@@ -103,13 +91,7 @@ public class Prestamo
                 400);
         }
 
-        if (fechaDevolucion <= fechaPrestamo)
-        {
-            throw new ReglaNegocioException(
-                "RN-04",
-                "RN-04: La fecha de devolución debe ser posterior a la fecha de préstamo.",
-                400);
-        }
+        ValidarFechas(fechaPrestamo, fechaDevolucion);
 
         return new Prestamo
         {
@@ -129,6 +111,15 @@ public class Prestamo
 
     public void Aprobar(Guid responsableId)
     {
+        ValidarPendienteParaAprobacion();
+        ValidarResponsableId(responsableId);
+
+        ResponsableId = responsableId;
+        EstadoPrestamo = EstadosPrestamo.Activo;
+    }
+
+    public void ValidarPendienteParaAprobacion()
+    {
         if (!string.Equals(EstadoPrestamo, EstadosPrestamo.Pendiente, StringComparison.OrdinalIgnoreCase))
         {
             throw new ReglaNegocioException(
@@ -136,17 +127,28 @@ public class Prestamo
                 "Solo se puede aprobar un préstamo que se encuentre en estado 'Pendiente'.",
                 409);
         }
+    }
 
-        if (responsableId == Guid.Empty)
+    public static void ValidarResponsableId(Guid? responsableId)
+    {
+        if (!responsableId.HasValue || responsableId.Value == Guid.Empty)
         {
             throw new ReglaNegocioException(
                 "RN-05",
-                "RN-05: Todo préstamo debe tener un usuario responsable registrado.",
+                MensajesRegla.Rn05ResponsableRegistrado,
                 400);
         }
+    }
 
-        ResponsableId = responsableId;
-        EstadoPrestamo = EstadosPrestamo.Activo;
+    private static void ValidarFechas(DateOnly fechaPrestamo, DateOnly fechaDevolucion)
+    {
+        if (fechaDevolucion <= fechaPrestamo)
+        {
+            throw new ReglaNegocioException(
+                "RN-04",
+                MensajesRegla.Rn04DevolucionPosteriorAPrestamo,
+                400);
+        }
     }
 
     public void RegistrarDevolucion(string? observacionDevolucion, DateOnly? fechaDevolucionReal = null)
@@ -171,7 +173,7 @@ public class Prestamo
         {
             throw new ReglaNegocioException(
                 "RN-10",
-                "RN-10: Toda devolución deberá registrar observaciones.",
+                MensajesRegla.Rn10DevolucionConObservacion,
                 400);
         }
 

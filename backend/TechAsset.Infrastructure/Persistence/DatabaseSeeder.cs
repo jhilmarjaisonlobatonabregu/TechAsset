@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using TechAsset.Domain.Constants;
 using TechAsset.Domain.Entities;
 using TechAsset.Infrastructure.Security;
@@ -7,6 +7,19 @@ namespace TechAsset.Infrastructure.Persistence;
 
 public static class DatabaseSeeder
 {
+    private sealed record UsuariosSemilla(
+        Usuario Admin, Usuario Soporte1, Usuario Soporte2,
+        Usuario ColabDev1, Usuario ColabDev2, Usuario ColabData,
+        Usuario ColabQa, Usuario ColabFin, Usuario ColabInactivo)
+    {
+        public Usuario[] Todos => new[]
+        {
+            Admin, Soporte1, Soporte2,
+            ColabDev1, ColabDev2, ColabData,
+            ColabQa, ColabFin, ColabInactivo
+        };
+    }
+
     public static async Task SeedAsync(TechAssetDbContext db, CancellationToken ct = default)
     {
         await db.Database.EnsureCreatedAsync(ct);
@@ -18,14 +31,28 @@ public static class DatabaseSeeder
 
         var fechaBase = new DateTime(2026, 1, 10, 9, 0, 0, DateTimeKind.Utc);
 
-        // 1. Usuarios (9 cuentas realistas en los 3 roles)
+        var usuarios = CrearUsuarios(fechaBase);
+        var equipos = CrearEquipos(fechaBase);
+        var prestamos = CrearPrestamos(usuarios, equipos, fechaBase);
+        var movimientos = CrearMovimientos(usuarios, equipos, prestamos, fechaBase);
+
+        db.Usuarios.AddRange(usuarios.Todos);
+        db.Equipos.AddRange(equipos);
+        db.Prestamos.AddRange(prestamos);
+        db.MovimientosInventario.AddRange(movimientos);
+        await db.SaveChangesAsync(ct);
+    }
+
+    // 1. Usuarios (9 cuentas realistas en los 3 roles)
+    private static UsuariosSemilla CrearUsuarios(DateTime fechaBase)
+    {
         var uAdmin = new Usuario
         {
             Id = Guid.Parse("11111111-1111-1111-1111-111111111001"),
             Nombres = "Carlos",
             Apellidos = "Mendoza Salazar",
             Correo = "cmendoza@innovatech.pe",
-            Area = "Infraestructura y Soporte",
+            Area = Areas.InfraestructuraSoporte,
             Rol = Roles.Administrador,
             Estado = true,
             PasswordHash = PasswordHasher.HashPassword("Admin2026!"),
@@ -38,7 +65,7 @@ public static class DatabaseSeeder
             Nombres = "Lucía",
             Apellidos = "Quispe Huamán",
             Correo = "lquispe@innovatech.pe",
-            Area = "Infraestructura y Soporte",
+            Area = Areas.InfraestructuraSoporte,
             Rol = Roles.ResponsableTecnologia,
             Estado = true,
             PasswordHash = PasswordHasher.HashPassword("Soporte2026!"),
@@ -51,7 +78,7 @@ public static class DatabaseSeeder
             Nombres = "Marco",
             Apellidos = "Rodríguez Vargas",
             Correo = "mrodriguez@innovatech.pe",
-            Area = "Infraestructura y Soporte",
+            Area = Areas.InfraestructuraSoporte,
             Rol = Roles.ResponsableTecnologia,
             Estado = true,
             PasswordHash = PasswordHasher.HashPassword("Soporte2026!"),
@@ -67,7 +94,7 @@ public static class DatabaseSeeder
             Area = "Desarrollo de Software",
             Rol = Roles.Colaborador,
             Estado = true,
-            PasswordHash = PasswordHasher.HashPassword("Colab2026!"),
+            PasswordHash = PasswordHasher.HashPassword(CredencialesPorDefecto.ContrasenaColaborador),
             FechaRegistro = fechaBase.AddDays(3)
         };
 
@@ -80,7 +107,7 @@ public static class DatabaseSeeder
             Area = "Desarrollo de Software",
             Rol = Roles.Colaborador,
             Estado = true,
-            PasswordHash = PasswordHasher.HashPassword("Colab2026!"),
+            PasswordHash = PasswordHasher.HashPassword(CredencialesPorDefecto.ContrasenaColaborador),
             FechaRegistro = fechaBase.AddDays(4)
         };
 
@@ -93,7 +120,7 @@ public static class DatabaseSeeder
             Area = "Ciencia de Datos e IA",
             Rol = Roles.Colaborador,
             Estado = true,
-            PasswordHash = PasswordHasher.HashPassword("Colab2026!"),
+            PasswordHash = PasswordHasher.HashPassword(CredencialesPorDefecto.ContrasenaColaborador),
             FechaRegistro = fechaBase.AddDays(5)
         };
 
@@ -106,7 +133,7 @@ public static class DatabaseSeeder
             Area = "Aseguramiento de Calidad QA",
             Rol = Roles.Colaborador,
             Estado = true,
-            PasswordHash = PasswordHasher.HashPassword("Colab2026!"),
+            PasswordHash = PasswordHasher.HashPassword(CredencialesPorDefecto.ContrasenaColaborador),
             FechaRegistro = fechaBase.AddDays(6)
         };
 
@@ -119,7 +146,7 @@ public static class DatabaseSeeder
             Area = "Finanzas y Contabilidad",
             Rol = Roles.Colaborador,
             Estado = true,
-            PasswordHash = PasswordHasher.HashPassword("Colab2026!"),
+            PasswordHash = PasswordHasher.HashPassword(CredencialesPorDefecto.ContrasenaColaborador),
             FechaRegistro = fechaBase.AddDays(7)
         };
 
@@ -132,20 +159,19 @@ public static class DatabaseSeeder
             Area = "Operaciones y Proyectos",
             Rol = Roles.Colaborador,
             Estado = false,
-            PasswordHash = PasswordHasher.HashPassword("Colab2026!"),
+            PasswordHash = PasswordHasher.HashPassword(CredencialesPorDefecto.ContrasenaColaborador),
             FechaRegistro = fechaBase.AddDays(8)
         };
 
-        var usuarios = new[]
-        {
+        return new UsuariosSemilla(
             uAdmin, uSoporte1, uSoporte2,
             uColabDev1, uColabDev2, uColabData,
-            uColabQa, uColabFin, uColabInactivo
-        };
+            uColabQa, uColabFin, uColabInactivo);
+    }
 
-        db.Usuarios.AddRange(usuarios);
-
-        // 2. Equipos (24 equipos en las 7 categorías: 13 Disponible, 6 Prestado, 3 Mantenimiento, 2 Baja)
+    // 2. Equipos (24 equipos en las 7 categorías: 13 Disponible, 6 Prestado, 3 Mantenimiento, 2 Baja)
+    private static List<Equipo> CrearEquipos(DateTime fechaBase)
+    {
         var eLap1 = new Equipo { Id = Guid.Parse("22222222-2222-2222-2222-222222222001"), CodigoPatrimonial = "INV-LAP-001", Nombre = "ThinkPad T14 Gen 4 i7 32GB", Categoria = CategoriasEquipo.Laptops, Marca = "Lenovo", Estado = EstadosEquipo.Prestado, FechaRegistro = fechaBase };
         var eLap2 = new Equipo { Id = Guid.Parse("22222222-2222-2222-2222-222222222002"), CodigoPatrimonial = "INV-LAP-002", Nombre = "MacBook Pro 14 M3 Pro 18GB", Categoria = CategoriasEquipo.Laptops, Marca = "Apple", Estado = EstadosEquipo.Prestado, FechaRegistro = fechaBase };
         var eLap3 = new Equipo { Id = Guid.Parse("22222222-2222-2222-2222-222222222003"), CodigoPatrimonial = "INV-LAP-003", Nombre = "Latitude 5540 Core i7 16GB", Categoria = CategoriasEquipo.Laptops, Marca = "Dell", Estado = EstadosEquipo.Disponible, FechaRegistro = fechaBase };
@@ -177,7 +203,7 @@ public static class DatabaseSeeder
         var eRed2 = new Equipo { Id = Guid.Parse("22222222-2222-2222-2222-222222222023"), CodigoPatrimonial = "INV-RED-002", Nombre = "UniFi U6 Enterprise Wi-Fi 6E AP", Categoria = CategoriasEquipo.EquiposRed, Marca = "Ubiquiti", Estado = EstadosEquipo.Disponible, FechaRegistro = fechaBase };
         var eRed3 = new Equipo { Id = Guid.Parse("22222222-2222-2222-2222-222222222024"), CodigoPatrimonial = "INV-RED-003", Nombre = "FortiGate 60F Next-Gen Firewall", Categoria = CategoriasEquipo.EquiposRed, Marca = "Fortinet", Estado = EstadosEquipo.Disponible, FechaRegistro = fechaBase };
 
-        var equipos = new[]
+        return new List<Equipo>
         {
             eLap1, eLap2, eLap3, eLap4, eLap5, eLap6,
             ePc1, ePc2, ePc3,
@@ -187,14 +213,39 @@ public static class DatabaseSeeder
             eProy1, eProy2,
             eRed1, eRed2, eRed3
         };
+    }
 
-        db.Equipos.AddRange(equipos);
+    private static Equipo BuscarEquipo(IEnumerable<Equipo> equipos, string codigoPatrimonial)
+        => equipos.First(e => e.CodigoPatrimonial == codigoPatrimonial);
 
-        // 3. Préstamos (18 préstamos: 6 Activos y 12 Devueltos)
-        // Desarrollo de Software tendrá 7 préstamos para liderar claramente el indicador AreaConMayorUso
-        var prestamos = new List<Prestamo>
+    // 3. Préstamos (20 préstamos: 12 Devueltos, 6 Activos y 2 Pendientes)
+    // Desarrollo de Software tendrá 7 préstamos para liderar claramente el indicador AreaConMayorUso
+    private static List<Prestamo> CrearPrestamos(UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, DateTime fechaBase)
+    {
+        var prestamos = new List<Prestamo>();
+        prestamos.AddRange(CrearPrestamosDevueltos(usuarios, equipos, fechaBase));
+        prestamos.AddRange(CrearPrestamosActivos(usuarios, equipos, fechaBase));
+        prestamos.AddRange(CrearSolicitudesPendientes(usuarios, equipos, fechaBase));
+        return prestamos;
+    }
+
+    // --- 12 Préstamos Devueltos ---
+    private static List<Prestamo> CrearPrestamosDevueltos(UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, DateTime fechaBase)
+    {
+        var (uAdmin, uSoporte1, uSoporte2, uColabDev1, uColabDev2, uColabData, uColabQa, uColabFin, uColabInactivo) = usuarios;
+        var eLap1 = BuscarEquipo(equipos, "INV-LAP-001");
+        var eLap2 = BuscarEquipo(equipos, "INV-LAP-002");
+        var eLap3 = BuscarEquipo(equipos, "INV-LAP-003");
+        var eLap4 = BuscarEquipo(equipos, "INV-LAP-004");
+        var eLap5 = BuscarEquipo(equipos, "INV-LAP-005");
+        var ePc3 = BuscarEquipo(equipos, "INV-PC-003");
+        var eMon1 = BuscarEquipo(equipos, "INV-MON-001");
+        var eTab1 = BuscarEquipo(equipos, "INV-TAB-001");
+        var eTab3 = BuscarEquipo(equipos, "INV-TAB-003");
+        var eProy1 = BuscarEquipo(equipos, "INV-PRO-001");
+
+        return new List<Prestamo>
         {
-            // --- 12 Préstamos Devueltos ---
             new()
             {
                 Id = Guid.Parse("33333333-3333-3333-3333-333333333001"),
@@ -363,8 +414,22 @@ public static class DatabaseSeeder
                 EstadoPrestamo = EstadosPrestamo.Devuelto,
                 FechaRegistro = fechaBase.AddDays(4)
             },
+        };
+    }
 
-            // --- 6 Préstamos Activos (coinciden con los 6 equipos en Estado = Prestado) ---
+    // --- 6 Préstamos Activos (coinciden con los 6 equipos en Estado = Prestado) ---
+    private static List<Prestamo> CrearPrestamosActivos(UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, DateTime fechaBase)
+    {
+        var (uAdmin, uSoporte1, uSoporte2, uColabDev1, uColabDev2, uColabData, uColabQa, uColabFin, uColabInactivo) = usuarios;
+        var eLap1 = BuscarEquipo(equipos, "INV-LAP-001");
+        var eLap2 = BuscarEquipo(equipos, "INV-LAP-002");
+        var ePc1 = BuscarEquipo(equipos, "INV-PC-001");
+        var eMon1 = BuscarEquipo(equipos, "INV-MON-001");
+        var eTab1 = BuscarEquipo(equipos, "INV-TAB-001");
+        var eRed1 = BuscarEquipo(equipos, "INV-RED-001");
+
+        return new List<Prestamo>
+        {
             new()
             {
                 Id = Guid.Parse("33333333-3333-3333-3333-333333333013"),
@@ -437,8 +502,18 @@ public static class DatabaseSeeder
                 EstadoPrestamo = EstadosPrestamo.Activo,
                 FechaRegistro = fechaBase.AddDays(50)
             },
+        };
+    }
 
-            // --- 2 Solicitudes Pendientes de Aprobación (equipos permanecen en Estado = Disponible y ResponsableId = null) ---
+    // --- 2 Solicitudes Pendientes de Aprobación (equipos permanecen en Estado = Disponible y ResponsableId = null) ---
+    private static List<Prestamo> CrearSolicitudesPendientes(UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, DateTime fechaBase)
+    {
+        var (uAdmin, uSoporte1, uSoporte2, uColabDev1, uColabDev2, uColabData, uColabQa, uColabFin, uColabInactivo) = usuarios;
+        var eLap3 = BuscarEquipo(equipos, "INV-LAP-003");
+        var eLap4 = BuscarEquipo(equipos, "INV-LAP-004");
+
+        return new List<Prestamo>
+        {
             new()
             {
                 Id = Guid.Parse("33333333-3333-3333-3333-333333333019"),
@@ -464,10 +539,22 @@ public static class DatabaseSeeder
                 FechaRegistro = fechaBase.AddDays(57)
             }
         };
+    }
 
-        db.Prestamos.AddRange(prestamos);
+    // 4. Movimientos de Inventario (44 registros detallados para RF-17)
+    private static List<MovimientoInventario> CrearMovimientos(
+        UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, IReadOnlyList<Prestamo> prestamos, DateTime fechaBase)
+    {
+        var movimientos = new List<MovimientoInventario>();
+        movimientos.AddRange(CrearMovimientosAlta(usuarios, equipos, fechaBase));
+        movimientos.AddRange(CrearMovimientosPrestamosYDevoluciones(usuarios, equipos, prestamos));
+        movimientos.AddRange(CrearMovimientosMantenimientoYBaja(usuarios, equipos));
+        return movimientos;
+    }
 
-        // 4. Movimientos de Inventario (28 registros detallados para RF-17)
+    private static List<MovimientoInventario> CrearMovimientosAlta(UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, DateTime fechaBase)
+    {
+        var uAdmin = usuarios.Admin;
         var movimientos = new List<MovimientoInventario>();
         var idx = 1;
 
@@ -482,10 +569,19 @@ public static class DatabaseSeeder
                 EstadoAnterior = "Nuevo",
                 EstadoNuevo = EstadosEquipo.Disponible,
                 ResponsableId = uAdmin.Id,
-                Area = "Infraestructura y Soporte",
+                Area = Areas.InfraestructuraSoporte,
                 Observacion = $"Alta patrimonial inicial del activo {eq.CodigoPatrimonial} ({eq.Nombre})."
             });
         }
+
+        return movimientos;
+    }
+
+    private static List<MovimientoInventario> CrearMovimientosPrestamosYDevoluciones(
+        UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, IReadOnlyList<Prestamo> prestamos)
+    {
+        var eLap5 = BuscarEquipo(equipos, "INV-LAP-005");
+        var movimientos = new List<MovimientoInventario>();
 
         foreach (var pr in prestamos)
         {
@@ -493,7 +589,7 @@ public static class DatabaseSeeder
             {
                 continue;
             }
-            var colab = usuarios.First(u => u.Id == pr.UsuarioId);
+            var colab = usuarios.Todos.First(u => u.Id == pr.UsuarioId);
             movimientos.Add(new MovimientoInventario
             {
                 Id = Guid.NewGuid(),
@@ -527,7 +623,19 @@ public static class DatabaseSeeder
             }
         }
 
-        // Movimientos adicionales de Mantenimiento y Baja Lógica
+        return movimientos;
+    }
+
+    // Movimientos adicionales de Mantenimiento y Baja Lógica
+    private static List<MovimientoInventario> CrearMovimientosMantenimientoYBaja(UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos)
+    {
+        var (uAdmin, uSoporte1, uSoporte2) = (usuarios.Admin, usuarios.Soporte1, usuarios.Soporte2);
+        var eImp2 = BuscarEquipo(equipos, "INV-IMP-002");
+        var eProy2 = BuscarEquipo(equipos, "INV-PRO-002");
+        var ePc3 = BuscarEquipo(equipos, "INV-PC-003");
+        var eTab3 = BuscarEquipo(equipos, "INV-TAB-003");
+        var movimientos = new List<MovimientoInventario>();
+
         movimientos.Add(new MovimientoInventario
         {
             Id = Guid.NewGuid(),
@@ -537,7 +645,7 @@ public static class DatabaseSeeder
             EstadoAnterior = EstadosEquipo.Disponible,
             EstadoNuevo = EstadosEquipo.Mantenimiento,
             ResponsableId = uSoporte1.Id,
-            Area = "Infraestructura y Soporte",
+            Area = Areas.InfraestructuraSoporte,
             Observacion = "Limpieza de cabezales de impresión y calibración de inyectores Epson."
         });
 
@@ -550,7 +658,7 @@ public static class DatabaseSeeder
             EstadoAnterior = EstadosEquipo.Disponible,
             EstadoNuevo = EstadosEquipo.Mantenimiento,
             ResponsableId = uSoporte2.Id,
-            Area = "Infraestructura y Soporte",
+            Area = Areas.InfraestructuraSoporte,
             Observacion = "Sustitución de lámpara óptica y filtro de aire en proyector BenQ."
         });
 
@@ -563,7 +671,7 @@ public static class DatabaseSeeder
             EstadoAnterior = EstadosEquipo.Disponible,
             EstadoNuevo = EstadosEquipo.Baja,
             ResponsableId = uAdmin.Id,
-            Area = "Infraestructura y Soporte",
+            Area = Areas.InfraestructuraSoporte,
             Observacion = "RN-06: Baja lógica aplicada tras cumplir vida útil contable conservando historial de préstamos."
         });
 
@@ -576,11 +684,10 @@ public static class DatabaseSeeder
             EstadoAnterior = EstadosEquipo.Disponible,
             EstadoNuevo = EstadosEquipo.Baja,
             ResponsableId = uAdmin.Id,
-            Area = "Infraestructura y Soporte",
+            Area = Areas.InfraestructuraSoporte,
             Observacion = "RN-06: Baja lógica aplicada por desgaste severo de batería conservando trazabilidad histórica."
         });
 
-        db.MovimientosInventario.AddRange(movimientos);
-        await db.SaveChangesAsync(ct);
+        return movimientos;
     }
 }

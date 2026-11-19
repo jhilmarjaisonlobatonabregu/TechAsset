@@ -11,6 +11,8 @@ namespace TechAsset.Infrastructure.Services;
 
 public class UsuarioService : IUsuarioService
 {
+    private const string MensajeUsuarioNoExiste = "El usuario solicitado no existe.";
+
     private readonly TechAssetDbContext _db;
 
     public UsuarioService(TechAssetDbContext db)
@@ -76,7 +78,7 @@ public class UsuarioService : IUsuarioService
 
         if (usuario is null)
         {
-            throw new ReglaNegocioException("USR-404", "El usuario solicitado no existe.", 404);
+            throw new ReglaNegocioException("USR-404", MensajeUsuarioNoExiste, 404);
         }
 
         return MapearDto(usuario);
@@ -84,8 +86,6 @@ public class UsuarioService : IUsuarioService
 
     public async Task<UsuarioDto> CrearAsync(CrearUsuarioDto dto, CancellationToken ct = default)
     {
-        ValidarCamposBasicos(dto.Nombres, dto.Apellidos, dto.Correo, dto.Area, dto.Rol);
-
         var correoNorm = dto.Correo.Trim().ToLowerInvariant();
         var existeCorreo = await _db.Usuarios.AnyAsync(u => u.Correo.ToLower() == correoNorm, ct);
         if (existeCorreo)
@@ -96,7 +96,7 @@ public class UsuarioService : IUsuarioService
                 409);
         }
 
-        var passwordPlano = string.IsNullOrWhiteSpace(dto.Password) ? "Colab2026!" : dto.Password.Trim();
+        var passwordPlano = string.IsNullOrWhiteSpace(dto.Password) ? CredencialesPorDefecto.ContrasenaColaborador : dto.Password.Trim();
 
         var nuevoUsuario = new Usuario
         {
@@ -119,8 +119,6 @@ public class UsuarioService : IUsuarioService
 
     public async Task<UsuarioDto> ActualizarAsync(Guid id, ActualizarUsuarioDto dto, string? rolActor = null, CancellationToken ct = default)
     {
-        ValidarCamposBasicos(dto.Nombres, dto.Apellidos, dto.Correo, dto.Area, dto.Rol);
-
         var usuario = await _db.Usuarios
             .Include(u => u.PrestamosRecibidos)
             .FirstOrDefaultAsync(u => u.Id == id, ct);
@@ -159,7 +157,7 @@ public class UsuarioService : IUsuarioService
 
         if (usuario is null)
         {
-            throw new ReglaNegocioException("USR-404", "El usuario solicitado no existe.", 404);
+            throw new ReglaNegocioException("USR-404", MensajeUsuarioNoExiste, 404);
         }
 
         // RN-09: Solo el Administrador podrá deshabilitar usuarios
@@ -167,21 +165,6 @@ public class UsuarioService : IUsuarioService
 
         await _db.SaveChangesAsync(ct);
         return MapearDto(usuario);
-    }
-
-    private static void ValidarCamposBasicos(string nombres, string apellidos, string correo, string area, string rol)
-    {
-        if (string.IsNullOrWhiteSpace(nombres) || string.IsNullOrWhiteSpace(apellidos))
-            throw new ReglaNegocioException("VAL-USR", "Los nombres y apellidos del colaborador son obligatorios.", 400);
-
-        if (string.IsNullOrWhiteSpace(correo) || !correo.Contains('@'))
-            throw new ReglaNegocioException("VAL-CORREO", "Debe proporcionar un correo electrónico válido.", 400);
-
-        if (string.IsNullOrWhiteSpace(area))
-            throw new ReglaNegocioException("VAL-AREA", "El área del colaborador es obligatoria.", 400);
-
-        if (!string.IsNullOrWhiteSpace(rol) && !Roles.Todos.Contains(rol.Trim()))
-            throw new ReglaNegocioException("VAL-ROL", $"El rol '{rol}' no es válido.", 400);
     }
 
     private static UsuarioDto MapearDto(Usuario u) => new()
