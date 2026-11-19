@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   AlertCircle,
+  ArrowLeft,
   Building2,
   Eye,
   EyeOff,
@@ -17,7 +18,11 @@ import { ApiError } from '../services/apiClient';
 import { mensajeError } from '../utils/errores';
 import { loginSchema, type LoginFormValues } from '../utils/esquemas';
 
-export function LoginPage() {
+export interface LoginPageProps {
+  onVolverLanding?: () => void;
+}
+
+export function LoginPage({ onVolverLanding }: LoginPageProps) {
   const { iniciarSesion } = useAuth();
   const [errorServidor, setErrorServidor] = useState<string | null>(null);
   const [mostrarPassword, setMostrarPassword] = useState(false);
@@ -108,8 +113,20 @@ export function LoginPage() {
       <main className="col-span-1 lg:col-span-2 flex min-h-screen items-center justify-center p-6 sm:p-8 xl:p-12 bg-white dark:bg-slate-950">
         <div className="w-full max-w-[420px] my-auto flex flex-col justify-center">
           <div>
+            {onVolverLanding && (
+              <div className="mb-4">
+                <button
+                  type="button"
+                  onClick={onVolverLanding}
+                  className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-blue-600 underline-offset-4 transition-colors hover:text-blue-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span>Volver a la presentación</span>
+                </button>
+              </div>
+            )}
             <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300 w-fit">
-              <ShieldCheck className="h-3.5 w-3.5" /> Acceso seguro con JWT
+              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" /> Acceso seguro con JWT
             </span>
             <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               Iniciar sesión

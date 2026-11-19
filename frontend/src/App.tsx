@@ -3,6 +3,7 @@ import { AppLayout } from './components/layout/AppLayout';
 import { useAuth } from './context/AuthContext';
 import { DashboardPage } from './pages/DashboardPage';
 import { EquiposPage } from './pages/EquiposPage';
+import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { PrestamosPage } from './pages/PrestamosPage';
 import { ReportesPage } from './pages/ReportesPage';
@@ -11,11 +12,15 @@ import type { VistaNavegacion } from './types';
 
 function App() {
   const { esAutenticado, puedeOperarInventario } = useAuth();
+  const [mostrarLogin, setMostrarLogin] = useState(false);
   const [vista, setVista] = useState<VistaNavegacion>('dashboard');
   const [accionInicial, setAccionInicial] = useState<string | undefined>(undefined);
 
   if (!esAutenticado) {
-    return <LoginPage />;
+    if (!mostrarLogin) {
+      return <LandingPage onIniciarSesion={() => setMostrarLogin(true)} />;
+    }
+    return <LoginPage onVolverLanding={() => setMostrarLogin(false)} />;
   }
 
   const cambiarVista = (nueva: VistaNavegacion, accion?: string) => {
