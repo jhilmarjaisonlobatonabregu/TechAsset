@@ -3,74 +3,75 @@
 -- EMPRESA: Innovatech Solutions S.A.C. (+500 colaboradores)
 -- MOTOR:   PostgreSQL 16+
 -- BASE DE DATOS: techasset_db
--- DESCRIPCIÓN: Script DDL completo con restricciones declarativas de las Reglas
---              de Negocio (RN-01 a RN-10), índices de rendimiento y semilla
---              realista (9 usuarios, 24 equipos en las 7 categorías oficiales,
---              18 préstamos multi-área y 25 movimientos de inventario).
+-- DESCRIPCIÓN: Script DDL y DML alineado con TechAssetDbContext (EF Core) y
+--              DatabaseSeeder, incluyendo restricciones declarativas de las
+--              Reglas de Negocio (RN-01 a RN-10), índice parcial único para
+--              RN-01 y semilla idéntica al seeder de la aplicación (9 usuarios
+--              con hashes PBKDF2 reales, 24 equipos en las 7 categorías,
+--              20 préstamos: 12 Devueltos, 6 Activos y 2 Pendientes, y
+--              44 movimientos de inventario).
 -- =============================================================================
 
--- Extensión para generación de UUID v4 si se requiere en consultas directas
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
 
--- Limpieza ordenada en caso de recreación del esquema de desarrollo
-DROP TABLE IF EXISTS movimientos_inventario CASCADE;
-DROP TABLE IF EXISTS prestamos CASCADE;
-DROP TABLE IF EXISTS equipos CASCADE;
-DROP TABLE IF EXISTS usuarios CASCADE;
+-- Limpieza ordenada en caso de recreación del esquema
+DROP TABLE IF EXISTS public.movimientos_inventario CASCADE;
+DROP TABLE IF EXISTS public.prestamos CASCADE;
+DROP TABLE IF EXISTS public.equipos CASCADE;
+DROP TABLE IF EXISTS public.usuarios CASCADE;
 
 -- =============================================================================
 -- 1. TABLA: usuarios (RF-01 a RF-04 | RN-08, RN-09, RN-10)
 -- =============================================================================
-CREATE TABLE usuarios (
-    id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    nombres         VARCHAR(100)    NOT NULL CHECK (char_length(trim(nombres)) >= 2),
-    apellidos       VARCHAR(100)    NOT NULL CHECK (char_length(trim(apellidos)) >= 2),
-    correo          VARCHAR(150)    NOT NULL,
-    area            VARCHAR(100)    NOT NULL CHECK (char_length(trim(area)) >= 2),
-    estado          BOOLEAN         NOT NULL DEFAULT TRUE,
-    rol             VARCHAR(50)     NOT NULL,
-    password_hash   VARCHAR(255)    NOT NULL,
-    fecha_registro  TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+CREATE TABLE public.usuarios (
+    "Id"            uuid                    NOT NULL,
+    "Nombres"       character varying(100)  NOT NULL CHECK (char_length(trim("Nombres")) >= 2),
+    "Apellidos"     character varying(100)  NOT NULL CHECK (char_length(trim("Apellidos")) >= 2),
+    "Correo"        character varying(150)  NOT NULL,
+    "Area"          character varying(100)  NOT NULL CHECK (char_length(trim("Area")) >= 2),
+    "Estado"        boolean                 NOT NULL,
+    "Rol"           character varying(50)   NOT NULL,
+    "PasswordHash"  character varying(255)  NOT NULL,
+    "FechaRegistro" timestamp with time zone NOT NULL,
 
-    -- RN-08: No pueden existir dos usuarios con el mismo correo electrónico
-    CONSTRAINT uq_usuarios_correo UNIQUE (correo),
+    CONSTRAINT "PK_usuarios" PRIMARY KEY ("Id"),
 
     -- RN-09: Solo roles válidos del sistema (Administrador, Responsable de Tecnología, Colaborador)
     CONSTRAINT ck_usuarios_rol CHECK (
-        rol IN ('Administrador', 'Responsable de Tecnología', 'Colaborador')
+        "Rol" IN ('Administrador', 'Responsable de Tecnología', 'Colaborador')
     )
 );
 
-CREATE INDEX ix_usuarios_area ON usuarios(area);
-CREATE INDEX ix_usuarios_rol_estado ON usuarios(rol, estado);
+-- RN-08: No pueden existir dos usuarios con el mismo correo electrónico
+CREATE UNIQUE INDEX "IX_Usuarios_Correo" ON public.usuarios USING btree ("Correo");
 
-COMMENT ON TABLE usuarios IS 'Catálogo corporativo de usuarios de Innovatech Solutions S.A.C.';
-COMMENT ON COLUMN usuarios.correo IS 'Correo corporativo único validado por RN-08';
-COMMENT ON COLUMN usuarios.estado IS 'TRUE = Activo (habilitado para préstamos RN-10), FALSE = Inactivo';
+COMMENT ON TABLE public.usuarios IS 'Catálogo corporativo de usuarios de Innovatech Solutions S.A.C.';
+COMMENT ON COLUMN public.usuarios."Correo" IS 'Correo corporativo único validado por RN-08';
+COMMENT ON COLUMN public.usuarios."Estado" IS 'TRUE = Activo (habilitado para préstamos RN-10), FALSE = Inactivo';
 
 -- =============================================================================
 -- 2. TABLA: equipos (RF-05 a RF-08 | RN-01, RN-02, RN-03, RN-06, RN-07)
 -- =============================================================================
-CREATE TABLE equipos (
-    id                  UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    codigo_patrimonial  VARCHAR(50)     NOT NULL,
-    nombre              VARCHAR(100)    NOT NULL CHECK (char_length(trim(nombre)) >= 3),
-    categoria           VARCHAR(50)     NOT NULL,
-    marca               VARCHAR(50)     NOT NULL,
-    estado              VARCHAR(30)     NOT NULL DEFAULT 'Disponible',
-    fecha_registro      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+CREATE TABLE public.equipos (
+    "Id"                uuid                    NOT NULL,
+    "CodigoPatrimonial" character varying(50)   NOT NULL,
+    "Nombre"            character varying(100)  NOT NULL CHECK (char_length(trim("Nombre")) >= 3),
+    "Categoria"         character varying(50)   NOT NULL,
+    "Marca"             character varying(50)   NOT NULL,
+    "Estado"            character varying(30)   NOT NULL,
+    "FechaRegistro"     timestamp with time zone NOT NULL,
 
-    -- RN-07: Cada equipo debe contar con un código patrimonial único
-    CONSTRAINT uq_equipos_codigo_patrimonial UNIQUE (codigo_patrimonial),
+    CONSTRAINT "PK_equipos" PRIMARY KEY ("Id"),
 
     -- Estados operativos permitidos según RF-07 y RN-02/RN-03
     CONSTRAINT ck_equipos_estado CHECK (
-        estado IN ('Disponible', 'Prestado', 'Mantenimiento', 'Baja')
+        "Estado" IN ('Disponible', 'Prestado', 'Mantenimiento', 'Baja')
     ),
 
     -- Categorías oficiales del inventario tecnológico de Innovatech Solutions S.A.C.
     CONSTRAINT ck_equipos_categoria CHECK (
-        categoria IN (
+        "Categoria" IN (
             'Laptops',
             'Computadoras de escritorio',
             'Monitores',
@@ -82,297 +83,211 @@ CREATE TABLE equipos (
     )
 );
 
-CREATE INDEX ix_equipos_estado ON equipos(estado);
-CREATE INDEX ix_equipos_categoria ON equipos(categoria);
-CREATE INDEX ix_equipos_marca ON equipos(marca);
+-- RN-07: Cada equipo debe contar con un código patrimonial único
+CREATE UNIQUE INDEX "IX_Equipos_CodigoPatrimonial" ON public.equipos USING btree ("CodigoPatrimonial");
 
-COMMENT ON TABLE equipos IS 'Inventario de activos tecnológicos con trazabilidad por código patrimonial único';
-COMMENT ON COLUMN equipos.codigo_patrimonial IS 'Identificador patrimonial único en formato INV-{CAT}-{CORRELATIVO} (RN-07)';
+COMMENT ON TABLE public.equipos IS 'Inventario de activos tecnológicos con trazabilidad por código patrimonial único';
+COMMENT ON COLUMN public.equipos."CodigoPatrimonial" IS 'Identificador patrimonial único en formato INV-{CAT}-{CORRELATIVO} (RN-07)';
 
 -- =============================================================================
 -- 3. TABLA: prestamos (RF-09 a RF-12 | RN-01, RN-02, RN-03, RN-04, RN-05, RN-10)
 -- =============================================================================
-CREATE TABLE prestamos (
-    id                      UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    fecha_prestamo          DATE        NOT NULL,
-    fecha_devolucion        DATE        NOT NULL,
-    fecha_devolucion_real   DATE        NULL,
-    observacion             TEXT        NOT NULL,
-    observacion_devolucion  TEXT        NULL,
-    estado_prestamo         VARCHAR(30) NOT NULL DEFAULT 'Activo',
-    usuario_id              UUID        NOT NULL,
-    equipo_id               UUID        NOT NULL,
-    responsable_id          UUID        NULL,
+CREATE TABLE public.prestamos (
+    "Id"                    uuid                    NOT NULL,
+    "FechaPrestamo"         date                    NOT NULL,
+    "FechaDevolucion"       date                    NOT NULL,
+    "FechaDevolucionReal"   date,
+    "Observacion"           text                    NOT NULL,
+    "ObservacionDevolucion" text,
+    "EstadoPrestamo"        character varying(30)   NOT NULL,
+    "UsuarioId"             uuid                    NOT NULL,
+    "EquipoId"              uuid                    NOT NULL,
+    "ResponsableId"         uuid,
+    "FechaRegistro"         timestamp with time zone NOT NULL,
+
+    CONSTRAINT "PK_prestamos" PRIMARY KEY ("Id"),
 
     -- RN-04: La fecha estimada de devolución debe ser estrictamente posterior a la fecha de préstamo
-    CONSTRAINT ck_prestamos_fechas_coherentes CHECK (fecha_devolucion > fecha_prestamo),
+    CONSTRAINT ck_prestamos_fechas_coherentes CHECK ("FechaDevolucion" > "FechaPrestamo"),
 
     -- Estados del ciclo de vida del préstamo (incluye solicitudes Pendientes de aprobación)
     CONSTRAINT ck_prestamos_estado CHECK (
-        estado_prestamo IN ('Pendiente', 'Activo', 'Devuelto')
+        "EstadoPrestamo" IN ('Pendiente', 'Activo', 'Devuelto')
     ),
 
     -- RN-05: Todo préstamo aprobado (Activo o Devuelto) debe tener un usuario responsable asignado
     CONSTRAINT ck_prestamos_responsable_activo CHECK (
-        estado_prestamo = 'Pendiente' OR responsable_id IS NOT NULL
+        "EstadoPrestamo" = 'Pendiente' OR "ResponsableId" IS NOT NULL
     ),
 
     -- Relaciones de integridad referencial (RN-06 impide eliminación física de equipos con historial)
-    CONSTRAINT fk_prestamos_usuario
-        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE RESTRICT,
-    CONSTRAINT fk_prestamos_equipo
-        FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE RESTRICT,
-    CONSTRAINT fk_prestamos_responsable
-        FOREIGN KEY (responsable_id) REFERENCES usuarios(id) ON DELETE RESTRICT
+    CONSTRAINT "FK_prestamos_equipos_EquipoId"
+        FOREIGN KEY ("EquipoId") REFERENCES public.equipos("Id") ON DELETE RESTRICT,
+    CONSTRAINT "FK_prestamos_usuarios_ResponsableId"
+        FOREIGN KEY ("ResponsableId") REFERENCES public.usuarios("Id") ON DELETE RESTRICT,
+    CONSTRAINT "FK_prestamos_usuarios_UsuarioId"
+        FOREIGN KEY ("UsuarioId") REFERENCES public.usuarios("Id") ON DELETE RESTRICT
 );
+
+CREATE INDEX "IX_prestamos_EquipoId_EstadoPrestamo" ON public.prestamos USING btree ("EquipoId", "EstadoPrestamo");
+CREATE INDEX "IX_prestamos_ResponsableId" ON public.prestamos USING btree ("ResponsableId");
+CREATE INDEX "IX_prestamos_UsuarioId" ON public.prestamos USING btree ("UsuarioId");
 
 -- RN-01: Un equipo no puede prestarse si ya tiene un préstamo activo simultáneo
 CREATE UNIQUE INDEX ix_prestamos_equipo_activo
-    ON prestamos(equipo_id)
-    WHERE estado_prestamo = 'Activo';
+    ON public.prestamos USING btree ("EquipoId")
+    WHERE ("EstadoPrestamo" = 'Activo');
 
-CREATE INDEX ix_prestamos_usuario_id ON prestamos(usuario_id);
-CREATE INDEX ix_prestamos_equipo_id ON prestamos(equipo_id);
-CREATE INDEX ix_prestamos_estado_prestamo ON prestamos(estado_prestamo);
-CREATE INDEX ix_prestamos_fecha_prestamo ON prestamos(fecha_prestamo DESC);
-
-COMMENT ON TABLE prestamos IS 'Registro transaccional de préstamos y devoluciones de equipos tecnológicos';
-COMMENT ON INDEX ix_prestamos_equipo_activo IS 'Garantía a nivel de motor de base de datos para RN-01 (un solo préstamo activo por equipo)';
+COMMENT ON TABLE public.prestamos IS 'Registro transaccional de préstamos y devoluciones de equipos tecnológicos';
+COMMENT ON INDEX public.ix_prestamos_equipo_activo IS 'Garantía a nivel de motor de base de datos para RN-01 (un solo préstamo activo por equipo)';
 
 -- =============================================================================
 -- 4. TABLA: movimientos_inventario (RF-07, RF-09, RF-10, RF-17 | Auditoría)
 -- =============================================================================
-CREATE TABLE movimientos_inventario (
-    id              UUID            PRIMARY KEY DEFAULT gen_random_uuid(),
-    fecha           TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
-    tipo_movimiento VARCHAR(40)     NOT NULL,
-    equipo_id       UUID            NOT NULL,
-    estado_anterior VARCHAR(30)     NOT NULL,
-    estado_nuevo    VARCHAR(30)     NOT NULL,
-    usuario_id      UUID            NULL,
-    responsable_id  UUID            NULL,
-    observacion     TEXT            NOT NULL,
+CREATE TABLE public.movimientos_inventario (
+    "Id"             uuid                    NOT NULL,
+    "Fecha"          timestamp with time zone NOT NULL,
+    "TipoMovimiento" character varying(40)   NOT NULL,
+    "EquipoId"       uuid                    NOT NULL,
+    "EstadoAnterior" character varying(30)   NOT NULL,
+    "EstadoNuevo"    character varying(30)   NOT NULL,
+    "UsuarioId"      uuid,
+    "ResponsableId"  uuid,
+    "Area"           character varying(100)  NOT NULL,
+    "Observacion"    text                    NOT NULL,
+
+    CONSTRAINT "PK_movimientos_inventario" PRIMARY KEY ("Id"),
 
     CONSTRAINT ck_movimientos_tipo CHECK (
-        tipo_movimiento IN ('Alta', 'Prestamo', 'Devolucion', 'Mantenimiento', 'Reactivacion', 'Baja')
+        "TipoMovimiento" IN ('AltaEquipo', 'ActualizacionEquipo', 'Prestamo', 'Devolucion', 'CambioEstado', 'BajaLogica')
     ),
-    CONSTRAINT fk_movimientos_equipo
-        FOREIGN KEY (equipo_id) REFERENCES equipos(id) ON DELETE RESTRICT,
-    CONSTRAINT fk_movimientos_usuario
-        FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE SET NULL,
-    CONSTRAINT fk_movimientos_responsable
-        FOREIGN KEY (responsable_id) REFERENCES usuarios(id) ON DELETE SET NULL
+    CONSTRAINT "FK_movimientos_inventario_equipos_EquipoId"
+        FOREIGN KEY ("EquipoId") REFERENCES public.equipos("Id") ON DELETE CASCADE,
+    CONSTRAINT "FK_movimientos_inventario_usuarios_ResponsableId"
+        FOREIGN KEY ("ResponsableId") REFERENCES public.usuarios("Id") ON DELETE SET NULL,
+    CONSTRAINT "FK_movimientos_inventario_usuarios_UsuarioId"
+        FOREIGN KEY ("UsuarioId") REFERENCES public.usuarios("Id") ON DELETE SET NULL
 );
 
-CREATE INDEX ix_movimientos_equipo_fecha ON movimientos_inventario(equipo_id, fecha DESC);
-CREATE INDEX ix_movimientos_tipo ON movimientos_inventario(tipo_movimiento);
+CREATE INDEX "IX_movimientos_inventario_EquipoId" ON public.movimientos_inventario USING btree ("EquipoId");
+CREATE INDEX "IX_movimientos_inventario_ResponsableId" ON public.movimientos_inventario USING btree ("ResponsableId");
+CREATE INDEX "IX_movimientos_inventario_UsuarioId" ON public.movimientos_inventario USING btree ("UsuarioId");
 
-COMMENT ON TABLE movimientos_inventario IS 'Bitácora inmutable de movimientos y cambios de estado del inventario tecnológico';
-
--- =============================================================================
--- 5. DATOS SEMILLA: 9 USUARIOS CORPORATIVOS (3 Roles, Múltiples Áreas)
--- Nota: El hash corresponde a PBKDF2-SHA256 / BCrypt compatible con el Seeder
---       de la aplicación (Contraseña de demostración documentada en README.md:
---       Admin123!, Resp123!, Colab123!)
--- =============================================================================
-INSERT INTO usuarios (id, nombres, apellidos, correo, area, estado, rol, password_hash, fecha_registro) VALUES
-('11111111-1111-4111-8111-111111111101', 'Carlos Alberto', 'Mendoza Salazar', 'cmendoza@innovatech.pe', 'Tecnologías de la Información', TRUE, 'Administrador', 'PBKDF2$100000$TechAssetSalt2026$Admin123!', '2026-01-05 08:30:00-05'),
-('11111111-1111-4111-8111-111111111102', 'Lucía Fernanda', 'Quispe Huamán', 'lquispe@innovatech.pe', 'Soporte e Infraestructura TI', TRUE, 'Responsable de Tecnología', 'PBKDF2$100000$TechAssetSalt2026$Resp123!', '2026-01-06 09:00:00-05'),
-('11111111-1111-4111-8111-111111111103', 'Marco Antonio', 'Rodríguez Vargas', 'mrodriguez@innovatech.pe', 'Soporte e Infraestructura TI', TRUE, 'Responsable de Tecnología', 'PBKDF2$100000$TechAssetSalt2026$Resp123!', '2026-01-06 09:15:00-05'),
-('11111111-1111-4111-8111-111111111104', 'Andrés Sebastián', 'Torres Cevallos', 'atorres@innovatech.pe', 'Ingeniería de Software', TRUE, 'Colaborador', 'PBKDF2$100000$TechAssetSalt2026$Colab123!', '2026-01-08 10:00:00-05'),
-('11111111-1111-4111-8111-111111111105', 'Valeria Milagros', 'Castillo Pineda', 'vcastillo@innovatech.pe', 'Consultoría y Proyectos', TRUE, 'Colaborador', 'PBKDF2$100000$TechAssetSalt2026$Colab123!', '2026-01-08 10:20:00-05'),
-('11111111-1111-4111-8111-111111111106', 'Diego Alejandro', 'Flores Gutiérrez', 'dflores@innovatech.pe', 'Finanzas y Contabilidad', TRUE, 'Colaborador', 'PBKDF2$100000$TechAssetSalt2026$Colab123!', '2026-01-09 11:00:00-05'),
-('11111111-1111-4111-8111-111111111107', 'Gabriela Sofía', 'Pereyra Lozano', 'gpereyra@innovatech.pe', 'Comercial y Marketing', TRUE, 'Colaborador', 'PBKDF2$100000$TechAssetSalt2026$Colab123!', '2026-01-10 09:45:00-05'),
-('11111111-1111-4111-8111-111111111108', 'Jorge Luis', 'Paredes Cáceres', 'jparedes@innovatech.pe', 'Operaciones y Logística', TRUE, 'Colaborador', 'PBKDF2$100000$TechAssetSalt2026$Colab123!', '2026-01-11 14:10:00-05'),
-('11111111-1111-4111-8111-111111111109', 'Rosa Elvira', 'Vásquez Benavides', 'rvasquez@innovatech.pe', 'Talento Humano', FALSE, 'Colaborador', 'PBKDF2$100000$TechAssetSalt2026$Colab123!', '2026-01-12 16:00:00-05');
+COMMENT ON TABLE public.movimientos_inventario IS 'Bitácora inmutable de movimientos y cambios de estado del inventario tecnológico';
 
 -- =============================================================================
--- 6. DATOS SEMILLA: 24 EQUIPOS TECNOLÓGICOS (7 Categorías Oficiales del Caso)
--- Distribución de estados actuales:
---   - Disponible:    13 equipos
---   - Prestado:       7 equipos (coinciden exactamente con los 7 préstamos Activos)
---   - Mantenimiento:  2 equipos (para validar RN-02)
---   - Baja:           2 equipos (para validar RN-03 y RN-06)
+-- 5. DATOS SEMILLA: 9 USUARIOS CORPORATIVOS (Hashes PBKDF2-SHA256 reales)
+-- Contraseñas por rol:
+--   - Administrador (cmendoza@innovatech.pe):            Admin2026!
+--   - Responsable de Tecnología (lquispe@innovatech.pe): Soporte2026!
+--   - Colaborador (atorres@innovatech.pe y demás):       Colab2026!
 -- =============================================================================
-INSERT INTO equipos (id, codigo_patrimonial, nombre, categoria, marca, estado, fecha_registro) VALUES
--- Categoría 1: Laptops (6 unidades)
-('22222222-2222-4222-8222-222222222201', 'INV-LAP-0001', 'Latitude 5540 Core i7 32GB', 'Laptops', 'Dell', 'Prestado', '2026-01-10 08:00:00-05'),
-('22222222-2222-4222-8222-222222222202', 'INV-LAP-0002', 'ThinkPad T14 Gen 4 Ryzen 7', 'Laptops', 'Lenovo', 'Prestado', '2026-01-10 08:05:00-05'),
-('22222222-2222-4222-8222-222222222203', 'INV-LAP-0003', 'EliteBook 840 G10 Core i7', 'Laptops', 'HP', 'Disponible', '2026-01-10 08:10:00-05'),
-('22222222-2222-4222-8222-222222222204', 'INV-LAP-0004', 'MacBook Pro 14 M3 Pro 18GB', 'Laptops', 'Apple', 'Prestado', '2026-01-10 08:15:00-05'),
-('22222222-2222-4222-8222-222222222205', 'INV-LAP-0005', 'ThinkPad X1 Carbon Gen 11', 'Laptops', 'Lenovo', 'Disponible', '2026-01-10 08:20:00-05'),
-('22222222-2222-4222-8222-222222222206', 'INV-LAP-0006', 'Latitude 7440 UltraLight', 'Laptops', 'Dell', 'Mantenimiento', '2026-01-10 08:25:00-05'),
-
--- Categoría 2: Computadoras de escritorio (4 unidades)
-('22222222-2222-4222-8222-222222222207', 'INV-PC-0001', 'OptiPlex 7010 SFF Core i7', 'Computadoras de escritorio', 'Dell', 'Disponible', '2026-01-11 09:00:00-05'),
-('22222222-2222-4222-8222-222222222208', 'INV-PC-0002', 'ThinkCentre M90q Tiny Gen 4', 'Computadoras de escritorio', 'Lenovo', 'Prestado', '2026-01-11 09:10:00-05'),
-('22222222-2222-4222-8222-222222222209', 'INV-PC-0003', 'ProDesk 400 G9 Workstation', 'Computadoras de escritorio', 'HP', 'Disponible', '2026-01-11 09:20:00-05'),
-('22222222-2222-4222-8222-222222222210', 'INV-PC-0004', 'OptiPlex 5090 Tower Legacy', 'Computadoras de escritorio', 'Dell', 'Baja', '2026-01-11 09:30:00-05'),
-
--- Categoría 3: Monitores (4 unidades)
-('22222222-2222-4222-8222-222222222211', 'INV-MON-0001', 'UltraSharp 27 4K USB-C U2723QE', 'Monitores', 'Dell', 'Prestado', '2026-01-12 10:00:00-05'),
-('22222222-2222-4222-8222-222222222212', 'INV-MON-0002', 'ThinkVision T24i-30 24 FHD IPS', 'Monitores', 'Lenovo', 'Disponible', '2026-01-12 10:10:00-05'),
-('22222222-2222-4222-8222-222222222213', 'INV-MON-0003', 'UltraWide 34 WQHD Ergo 34WN780', 'Monitores', 'LG', 'Disponible', '2026-01-12 10:20:00-05'),
-('22222222-2222-4222-8222-222222222214', 'INV-MON-0004', 'ViewFinity S8 27 UHD Profesional', 'Monitores', 'Samsung', 'Disponible', '2026-01-12 10:30:00-05'),
-
--- Categoría 4: Impresoras (3 unidades)
-('22222222-2222-4222-8222-222222222215', 'INV-IMP-0001', 'LaserJet Pro MFP 4103fdw Dúplex', 'Impresoras', 'HP', 'Disponible', '2026-01-13 11:00:00-05'),
-('22222222-2222-4222-8222-222222222216', 'INV-IMP-0002', 'EcoTank L6270 Multifuncional Red', 'Impresoras', 'Epson', 'Mantenimiento', '2026-01-13 11:15:00-05'),
-('22222222-2222-4222-8222-222222222217', 'INV-IMP-0003', 'MFC-L5900DW Corporativa Láser', 'Impresoras', 'Brother', 'Disponible', '2026-01-13 11:30:00-05'),
-
--- Categoría 5: Tablets (3 unidades)
-('22222222-2222-4222-8222-222222222218', 'INV-TAB-0001', 'iPad Air 11 M2 Wi-Fi + Cellular', 'Tablets', 'Apple', 'Prestado', '2026-01-14 08:45:00-05'),
-('22222222-2222-4222-8222-222222222219', 'INV-TAB-0002', 'Galaxy Tab S9 FE Enterprise Edition', 'Tablets', 'Samsung', 'Disponible', '2026-01-14 09:00:00-05'),
-('22222222-2222-4222-8222-222222222220', 'INV-TAB-0003', 'Tab P12 Pro 12.6 Con Teclado Pen', 'Tablets', 'Lenovo', 'Disponible', '2026-01-14 09:15:00-05'),
-
--- Categoría 6: Proyectores multimedia (2 unidades)
-('22222222-2222-4222-8222-222222222221', 'INV-PRO-0001', 'PowerLite L210W WXGA 4500 Lúmenes', 'Proyectores multimedia', 'Epson', 'Prestado', '2026-01-15 10:00:00-05'),
-('22222222-2222-4222-8222-222222222222', 'INV-PRO-0002', 'MH733 Full HD 4000 Lúmenes Corporativo', 'Proyectores multimedia', 'BenQ', 'Disponible', '2026-01-15 10:20:00-05'),
-
--- Categoría 7: Equipos de red (2 unidades)
-('22222222-2222-4222-8222-222222222223', 'INV-RED-0001', 'Catalyst 1200-24P PoE+ Managed Switch', 'Equipos de red', 'Cisco', 'Disponible', '2026-01-16 08:30:00-05'),
-('22222222-2222-4222-8222-222222222224', 'INV-RED-0002', 'UniFi U6 Enterprise Access Point Wi-Fi 6E', 'Equipos de red', 'Ubiquiti', 'Baja', '2026-01-16 08:50:00-05');
+INSERT INTO public.usuarios ("Id", "Nombres", "Apellidos", "Correo", "Area", "Estado", "Rol", "PasswordHash", "FechaRegistro") VALUES ('11111111-1111-1111-1111-111111111001', 'Carlos', 'Mendoza Salazar', 'cmendoza@innovatech.pe', 'Infraestructura y Soporte', true, 'Administrador', 'h/wSsk5wjalGN0Owk0k/gw==.Egg1bcQrHll49hN3RQvhe33JHfbXKvgaV7Pu+RFh+84=', '2026-01-10 04:00:00-05');
+INSERT INTO public.usuarios ("Id", "Nombres", "Apellidos", "Correo", "Area", "Estado", "Rol", "PasswordHash", "FechaRegistro") VALUES ('11111111-1111-1111-1111-111111111002', 'Lucía', 'Quispe Huamán', 'lquispe@innovatech.pe', 'Infraestructura y Soporte', true, 'Responsable de Tecnología', 'sbv/4bQ6rZ+My3EoIIWUaQ==.6pmFm1TxGyBPnyQRjNJBdT8YBfUdiDPGaoAxvx8YaUg=', '2026-01-11 04:00:00-05');
+INSERT INTO public.usuarios ("Id", "Nombres", "Apellidos", "Correo", "Area", "Estado", "Rol", "PasswordHash", "FechaRegistro") VALUES ('11111111-1111-1111-1111-111111111003', 'Marco', 'Rodríguez Vargas', 'mrodriguez@innovatech.pe', 'Infraestructura y Soporte', true, 'Responsable de Tecnología', 'GLn9+YR3qoL1k8UP9jG9Xw==.6L13OX3psm9ZP3SBGc4acp+WujXrOuWV4vnQK33hHv0=', '2026-01-12 04:00:00-05');
+INSERT INTO public.usuarios ("Id", "Nombres", "Apellidos", "Correo", "Area", "Estado", "Rol", "PasswordHash", "FechaRegistro") VALUES ('11111111-1111-1111-1111-111111111004', 'Alejandro', 'Torres Mejía', 'atorres@innovatech.pe', 'Desarrollo de Software', true, 'Colaborador', 'aqmh54R495QFrKLmXrDGcA==.zXzQPHhs4QpTYiGIofkxK6m/KdeaaRvomRiCjedhtHM=', '2026-01-13 04:00:00-05');
+INSERT INTO public.usuarios ("Id", "Nombres", "Apellidos", "Correo", "Area", "Estado", "Rol", "PasswordHash", "FechaRegistro") VALUES ('11111111-1111-1111-1111-111111111005', 'Valeria', 'Castillo Ríos', 'vcastillo@innovatech.pe', 'Desarrollo de Software', true, 'Colaborador', 'lhmeKi8mAhHYs9YJQsvLaQ==.vlABvdY5PyAxPQ4DdirxodimJiRrANhurW9gfIqzp+c=', '2026-01-14 04:00:00-05');
+INSERT INTO public.usuarios ("Id", "Nombres", "Apellidos", "Correo", "Area", "Estado", "Rol", "PasswordHash", "FechaRegistro") VALUES ('11111111-1111-1111-1111-111111111006', 'Diego', 'Flores Cáceres', 'dflores@innovatech.pe', 'Ciencia de Datos e IA', true, 'Colaborador', 'DQWDWkjlVkAbeJHvFhjcnQ==.2AFQLy8pHDPJSn9604kjohrmbQHzyxh2E9OgAZel5Gk=', '2026-01-15 04:00:00-05');
+INSERT INTO public.usuarios ("Id", "Nombres", "Apellidos", "Correo", "Area", "Estado", "Rol", "PasswordHash", "FechaRegistro") VALUES ('11111111-1111-1111-1111-111111111007', 'Gabriela', 'Pereyra Lozano', 'gpereyra@innovatech.pe', 'Aseguramiento de Calidad QA', true, 'Colaborador', 'zXvY6UAJWq4jvZtiG88ZRw==.pUDA7tUIgLtahKuL/bMS5QXdk8uu9npgHMxRUuvieZw=', '2026-01-16 04:00:00-05');
+INSERT INTO public.usuarios ("Id", "Nombres", "Apellidos", "Correo", "Area", "Estado", "Rol", "PasswordHash", "FechaRegistro") VALUES ('11111111-1111-1111-1111-111111111008', 'Jorge', 'Paredes Alarcón', 'jparedes@innovatech.pe', 'Finanzas y Contabilidad', true, 'Colaborador', 'rtCVmOI4a97EygX0YGqryQ==.sF9kDWEEwbccsnmgKVrHCKtvY6hqmzpvI7eer3D8bqg=', '2026-01-17 04:00:00-05');
+INSERT INTO public.usuarios ("Id", "Nombres", "Apellidos", "Correo", "Area", "Estado", "Rol", "PasswordHash", "FechaRegistro") VALUES ('11111111-1111-1111-1111-111111111009', 'Renato', 'Vásquez Espinoza', 'rvasquez@innovatech.pe', 'Operaciones y Proyectos', false, 'Colaborador', 'APMTR93CN6q+Y8Ko3QPsVQ==.TmyAjvXLl2ObKzJnXh4Xlxg9U66l4T910ZcwEBCB9A4=', '2026-01-18 04:00:00-05');
 
 -- =============================================================================
--- 7. DATOS SEMILLA: 18 PRÉSTAMOS (11 Devueltos Históricos + 7 Activos Actuales)
+-- 6. DATOS SEMILLA: 24 EQUIPOS TECNOLÓGICOS (7 Categorías Oficiales)
 -- =============================================================================
-INSERT INTO prestamos (
-    id, fecha_prestamo, fecha_devolucion, fecha_devolucion_real,
-    observacion, observacion_devolucion, estado_prestamo,
-    usuario_id, equipo_id, responsable_id
-) VALUES
--- 11 Préstamos históricos ya devueltos (nutren el ranking RF-15 y préstamos por área RF-16)
-('33333333-3333-4333-8333-333333333301', '2026-01-18', '2026-01-25', '2026-01-24',
- 'Asignación para sprint de arquitectura microservicios en cliente bancario',
- 'Equipo devuelto en óptimas condiciones con cargador original', 'Devuelto',
- '11111111-1111-4111-8111-111111111104', '22222222-2222-4222-8222-222222222201', '11111111-1111-4111-8111-111111111102'),
-
-('33333333-3333-4333-8333-333333333302', '2026-01-20', '2026-01-27', '2026-01-27',
- 'Préstamo temporal para auditoría externa en sede San Isidro',
- 'Revisión de hardware conforme sin rayaduras', 'Devuelto',
- '11111111-1111-4111-8111-111111111105', '22222222-2222-4222-8222-222222222202', '11111111-1111-4111-8111-111111111102'),
-
-('33333333-3333-4333-8333-333333333303', '2026-01-22', '2026-01-30', '2026-01-29',
- 'Cierre contable mensual y consolidación de estados financieros',
- 'Recepción conforme en almacén central TI', 'Devuelto',
- '11111111-1111-4111-8111-111111111106', '22222222-2222-4222-8222-222222222203', '11111111-1111-4111-8111-111111111103'),
-
-('33333333-3333-4333-8333-333333333304', '2026-01-26', '2026-02-02', '2026-02-01',
- 'Despliegue de entorno QA automatizado para proyecto retail',
- 'Sin observaciones técnicas al reingreso', 'Devuelto',
- '11111111-1111-4111-8111-111111111104', '22222222-2222-4222-8222-222222222201', '11111111-1111-4111-8111-111111111102'),
-
-('33333333-3333-4333-8333-333333333305', '2026-02-01', '2026-02-05', '2026-02-05',
- 'Presentación de propuesta comercial a directorio corporativo',
- 'Devuelto con control remoto y cable HDMI', 'Devuelto',
- '11111111-1111-4111-8111-111111111107', '22222222-2222-4222-8222-222222222221', '11111111-1111-4111-8111-111111111103'),
-
-('33333333-3333-4333-8333-333333333306', '2026-02-03', '2026-02-10', '2026-02-09',
- 'Toma de inventario físico en centro de distribución Callao',
- 'Pantalla intacta y batería al 90%', 'Devuelto',
- '11111111-1111-4111-8111-111111111108', '22222222-2222-4222-8222-222222222218', '11111111-1111-4111-8111-111111111102'),
-
-('33333333-3333-4333-8333-333333333307', '2026-02-06', '2026-02-14', '2026-02-13',
- 'Taller de diseño UX y prototipado móvil con cliente',
- 'Estuche y Apple Pencil verificados al retorno', 'Devuelto',
- '11111111-1111-4111-8111-111111111107', '22222222-2222-4222-8222-222222222204', '11111111-1111-4111-8111-111111111103'),
-
-('33333333-3333-4333-8333-333333333308', '2026-02-10', '2026-02-17', '2026-02-17',
- 'Segundo monitor para análisis de presupuestos anuales',
- 'Devuelto con cable USB-C y base ergonómica', 'Devuelto',
- '11111111-1111-4111-8111-111111111106', '22222222-2222-4222-8222-222222222211', '11111111-1111-4111-8111-111111111102'),
-
-('33333333-3333-4333-8333-333333333309', '2026-02-12', '2026-02-19', '2026-02-18',
- 'Pruebas de segmentación VLAN en laboratorio de red',
- 'Puertos PoE verificados operativos', 'Devuelto',
- '11111111-1111-4111-8111-111111111104', '22222222-2222-4222-8222-222222222223', '11111111-1111-4111-8111-111111111102'),
-
-('33333333-3333-4333-8333-333333333310', '2026-02-15', '2026-02-20', '2026-02-19',
- 'Préstamo histórico previo a baja técnica por obsolescencia',
- 'Presentó reinicios intermitentes en fuente de poder, derivado a evaluación', 'Devuelto',
- '11111111-1111-4111-8111-111111111108', '22222222-2222-4222-8222-222222222210', '11111111-1111-4111-8111-111111111103'),
-
-('33333333-3333-4333-8333-333333333311', '2026-02-20', '2026-02-26', '2026-02-26',
- 'Roadshow comercial de soluciones cloud Q1',
- 'Lente limpia y lámpara con 180 horas de uso', 'Devuelto',
- '11111111-1111-4111-8111-111111111105', '22222222-2222-4222-8222-222222222221', '11111111-1111-4111-8111-111111111102'),
-
--- 7 Préstamos ACTIVOS actuales (sincronizados con los 7 equipos en estado 'Prestado')
-('33333333-3333-4333-8333-333333333312', '2026-03-02', '2026-04-30', NULL,
- 'Desarrollo full-stack del proyecto corporativo TechAsset Fase Producción',
- NULL, 'Activo',
- '11111111-1111-4111-8111-111111111104', '22222222-2222-4222-8222-222222222201', '11111111-1111-4111-8111-111111111102'),
-
-('33333333-3333-4333-8333-333333333313', '2026-03-04', '2026-04-28', NULL,
- 'Consultoría ERP en oficinas de cliente minero',
- NULL, 'Activo',
- '11111111-1111-4111-8111-111111111105', '22222222-2222-4222-8222-222222222202', '11111111-1111-4111-8111-111111111102'),
-
-('33333333-3333-4333-8333-333333333314', '2026-03-05', '2026-04-25', NULL,
- 'Producción audiovisual y diseño de campaña digital Q2',
- NULL, 'Activo',
- '11111111-1111-4111-8111-111111111107', '22222222-2222-4222-8222-222222222204', '11111111-1111-4111-8111-111111111103'),
-
-('33333333-3333-4333-8333-333333333315', '2026-03-06', '2026-05-05', NULL,
- 'Estación dedicada para modelamiento tributario y libros electrónicos',
- NULL, 'Activo',
- '11111111-1111-4111-8111-111111111106', '22222222-2222-4222-8222-222222222208', '11111111-1111-4111-8111-111111111103'),
-
-('33333333-3333-4333-8333-333333333316', '2026-03-07', '2026-04-30', NULL,
- 'Monitor auxiliar 4K para monitoreo de pipelines CI/CD',
- NULL, 'Activo',
- '11111111-1111-4111-8111-111111111104', '22222222-2222-4222-8222-222222222211', '11111111-1111-4111-8111-111111111102'),
-
-('33333333-3333-4333-8333-333333333317', '2026-03-08', '2026-04-22', NULL,
- 'Supervisión móvil de despachos y recepción de almacén central',
- NULL, 'Activo',
- '11111111-1111-4111-8111-111111111108', '22222222-2222-4222-8222-222222222218', '11111111-1111-4111-8111-111111111102'),
-
-('33333333-3333-4333-8333-333333333318', '2026-03-09', '2026-04-20', NULL,
- 'Ciclo de demos ejecutivas para comité de transformación digital',
- NULL, 'Activo',
- '11111111-1111-4111-8111-111111111105', '22222222-2222-4222-8222-222222222221', '11111111-1111-4111-8111-111111111103'),
-
--- 2 Solicitudes PENDIENTES de aprobación (equipos permanecen en estado 'Disponible', responsable_id NULL)
-('33333333-3333-4333-8333-333333333319', '2026-03-12', '2026-03-26', NULL,
- 'Solicitud de laptop adicional para pruebas de carga y estrés del módulo de préstamos',
- NULL, 'Pendiente',
- '11111111-1111-4111-8111-111111111104', '22222222-2222-4222-8222-222222222203', NULL),
-
-('33333333-3333-4333-8333-333333333320', '2026-03-13', '2026-03-27', NULL,
- 'Solicitud de equipo portátil para validación funcional en entorno de preproducción',
- NULL, 'Pendiente',
- '11111111-1111-4111-8111-111111111107', '22222222-2222-4222-8222-222222222205', NULL);
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222001', 'INV-LAP-001', 'ThinkPad T14 Gen 4 i7 32GB', 'Laptops', 'Lenovo', 'Prestado', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222002', 'INV-LAP-002', 'MacBook Pro 14 M3 Pro 18GB', 'Laptops', 'Apple', 'Prestado', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222003', 'INV-LAP-003', 'Latitude 5540 Core i7 16GB', 'Laptops', 'Dell', 'Disponible', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222004', 'INV-LAP-004', 'EliteBook 840 G10 Ryzen 7', 'Laptops', 'HP', 'Disponible', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222005', 'INV-LAP-005', 'XPS 15 9530 OLED i9 32GB', 'Laptops', 'Dell', 'Mantenimiento', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222006', 'INV-LAP-006', 'ThinkPad X1 Carbon Gen 11', 'Laptops', 'Lenovo', 'Disponible', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222007', 'INV-PC-001', 'OptiPlex 7010 Tower i7', 'Computadoras de escritorio', 'Dell', 'Prestado', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222008', 'INV-PC-002', 'ProDesk 400 G9 SFF i5', 'Computadoras de escritorio', 'HP', 'Disponible', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222009', 'INV-PC-003', 'ThinkCentre M90q Tiny i7', 'Computadoras de escritorio', 'Lenovo', 'Baja', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222010', 'INV-MON-001', 'UltraSharp 27 4K USB-C Hub U2723QE', 'Monitores', 'Dell', 'Prestado', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222011', 'INV-MON-002', 'Odyssey G5 32 QHD 165Hz', 'Monitores', 'Samsung', 'Disponible', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222012', 'INV-MON-003', 'UltraWide 34 WQHD IPS 34WP65C', 'Monitores', 'LG', 'Disponible', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222013', 'INV-MON-004', 'ThinkVision P27h-30 27 QHD', 'Monitores', 'Lenovo', 'Disponible', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222014', 'INV-IMP-001', 'LaserJet Pro MFP 4103fdw', 'Impresoras', 'HP', 'Disponible', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222015', 'INV-IMP-002', 'EcoTank L6270 Multifuncional Red', 'Impresoras', 'Epson', 'Mantenimiento', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222016', 'INV-IMP-003', 'MFC-L8900CDW Láser Color Corporativa', 'Impresoras', 'Brother', 'Disponible', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222017', 'INV-TAB-001', 'iPad Pro 12.9 M2 Wi-Fi 256GB', 'Tablets', 'Apple', 'Prestado', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222018', 'INV-TAB-002', 'Galaxy Tab S9 FE+ 12.4 Con S-Pen', 'Tablets', 'Samsung', 'Disponible', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222019', 'INV-TAB-003', 'Tab P12 Pro AMOLED 256GB', 'Tablets', 'Lenovo', 'Baja', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222020', 'INV-PRO-001', 'PowerLite L210W WXGA 4500 Lúmenes', 'Proyectores multimedia', 'Epson', 'Disponible', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222021', 'INV-PRO-002', 'MH760 Full HD 5000 Lúmenes Sala Juntas', 'Proyectores multimedia', 'BenQ', 'Mantenimiento', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222022', 'INV-RED-001', 'Catalyst 1200-24P PoE+ Switch', 'Equipos de red', 'Cisco', 'Prestado', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222023', 'INV-RED-002', 'UniFi U6 Enterprise Wi-Fi 6E AP', 'Equipos de red', 'Ubiquiti', 'Disponible', '2026-01-10 04:00:00-05');
+INSERT INTO public.equipos ("Id", "CodigoPatrimonial", "Nombre", "Categoria", "Marca", "Estado", "FechaRegistro") VALUES ('22222222-2222-2222-2222-222222222024', 'INV-RED-003', 'FortiGate 60F Next-Gen Firewall', 'Equipos de red', 'Fortinet', 'Disponible', '2026-01-10 04:00:00-05');
 
 -- =============================================================================
--- 8. DATOS SEMILLA: 25 MOVIMIENTOS DE INVENTARIO (Bitácora de Auditoría RF-17)
+-- 7. DATOS SEMILLA: 20 PRÉSTAMOS (12 Devueltos + 6 Activos + 2 Pendientes)
 -- =============================================================================
-INSERT INTO movimientos_inventario (
-    id, fecha, tipo_movimiento, equipo_id,
-    estado_anterior, estado_nuevo, usuario_id, responsable_id, observacion
-) VALUES
-('44444444-4444-4444-8444-444444444401', '2026-01-18 09:00:00-05', 'Prestamo', '22222222-2222-4222-8222-222222222201', 'Disponible', 'Prestado', '11111111-1111-4111-8111-111111111104', '11111111-1111-4111-8111-111111111102', 'Préstamo inicial INV-LAP-0001 a Ingeniería de Software'),
-('44444444-4444-4444-8444-444444444402', '2026-01-24 17:30:00-05', 'Devolucion', '22222222-2222-4222-8222-222222222201', 'Prestado', 'Disponible', '11111111-1111-4111-8111-111111111104', '11111111-1111-4111-8111-111111111102', 'Devolución conforme INV-LAP-0001'),
-('44444444-4444-4444-8444-444444444403', '2026-01-20 09:30:00-05', 'Prestamo', '22222222-2222-4222-8222-222222222202', 'Disponible', 'Prestado', '11111111-1111-4111-8111-111111111105', '11111111-1111-4111-8111-111111111102', 'Préstamo INV-LAP-0002 a Consultoría y Proyectos'),
-('44444444-4444-4444-8444-444444444404', '2026-01-27 16:45:00-05', 'Devolucion', '22222222-2222-4222-8222-222222222202', 'Prestado', 'Disponible', '11111111-1111-4111-8111-111111111105', '11111111-1111-4111-8111-111111111102', 'Devolución conforme INV-LAP-0002'),
-('44444444-4444-4444-8444-444444444405', '2026-01-22 10:15:00-05', 'Prestamo', '22222222-2222-4222-8222-222222222203', 'Disponible', 'Prestado', '11111111-1111-4111-8111-111111111106', '11111111-1111-4111-8111-111111111103', 'Préstamo INV-LAP-0003 a Finanzas y Contabilidad'),
-('44444444-4444-4444-8444-444444444406', '2026-01-29 18:00:00-05', 'Devolucion', '22222222-2222-4222-8222-222222222203', 'Prestado', 'Disponible', '11111111-1111-4111-8111-111111111106', '11111111-1111-4111-8111-111111111103', 'Devolución conforme INV-LAP-0003'),
-('44444444-4444-4444-8444-444444444407', '2026-01-26 08:50:00-05', 'Prestamo', '22222222-2222-4222-8222-222222222201', 'Disponible', 'Prestado', '11111111-1111-4111-8111-111111111104', '11111111-1111-4111-8111-111111111102', 'Segundo préstamo INV-LAP-0001 para entorno QA'),
-('44444444-4444-4444-8444-444444444408', '2026-02-01 17:10:00-05', 'Devolucion', '22222222-2222-4222-8222-222222222201', 'Prestado', 'Disponible', '11111111-1111-4111-8111-111111111104', '11111111-1111-4111-8111-111111111102', 'Retorno conforme INV-LAP-0001'),
-('44444444-4444-4444-8444-444444444409', '2026-02-01 11:00:00-05', 'Prestamo', '22222222-2222-4222-8222-222222222221', 'Disponible', 'Prestado', '11111111-1111-4111-8111-111111111107', '11111111-1111-4111-8111-111111111103', 'Préstamo proyector INV-PRO-0001 a Comercial y Marketing'),
-('44444444-4444-4444-8444-444444444410', '2026-02-05 16:20:00-05', 'Devolucion', '22222222-2222-4222-8222-222222222221', 'Prestado', 'Disponible', '11111111-1111-4111-8111-111111111107', '11111111-1111-4111-8111-111111111103', 'Devolución proyector INV-PRO-0001'),
-('44444444-4444-4444-8444-444444444411', '2026-02-03 09:00:00-05', 'Prestamo', '22222222-2222-4222-8222-222222222218', 'Disponible', 'Prestado', '11111111-1111-4111-8111-111111111108', '11111111-1111-4111-8111-111111111102', 'Préstamo tablet INV-TAB-0001 a Operaciones y Logística'),
-('44444444-4444-4444-8444-444444444412', '2026-02-09 17:00:00-05', 'Devolucion', '22222222-2222-4222-8222-222222222218', 'Prestado', 'Disponible', '11111111-1111-4111-8111-111111111108', '11111111-1111-4111-8111-111111111102', 'Devolución tablet INV-TAB-0001'),
-('44444444-4444-4444-8444-444444444413', '2026-02-15 08:30:00-05', 'Prestamo', '22222222-2222-4222-8222-222222222210', 'Disponible', 'Prestado', '11111111-1111-4111-8111-111111111108', '11111111-1111-4111-8111-111111111103', 'Préstamo estación INV-PC-0004 a Operaciones y Logística'),
-('44444444-4444-4444-8444-444444444414', '2026-02-19 15:40:00-05', 'Devolucion', '22222222-2222-4222-8222-222222222210', 'Prestado', 'Disponible', '11111111-1111-4111-8111-111111111108', '11111111-1111-4111-8111-111111111103', 'Devolución con reporte de falla eléctrica en INV-PC-0004'),
-('44444444-4444-4444-8444-444444444415', '2026-02-20 10:00:00-05', 'Baja', '22222222-2222-4222-8222-222222222210', 'Disponible', 'Baja', NULL, '11111111-1111-4111-8111-111111111101', 'Baja definitiva INV-PC-0004 por daño irreparable en placa madre (conserva historial RN-06)'),
-('44444444-4444-4444-8444-444444444416', '2026-02-22 11:30:00-05', 'Baja', '22222222-2222-4222-8222-222222222224', 'Disponible', 'Baja', NULL, '11111111-1111-4111-8111-111111111101', 'Baja técnica de Access Point INV-RED-0002 por sobretensión en PoE'),
-('44444444-4444-4444-8444-444444444417', '2026-02-25 09:20:00-05', 'Mantenimiento', '22222222-2222-4222-8222-222222222206', 'Disponible', 'Mantenimiento', NULL, '11111111-1111-4111-8111-111111111102', 'Ingreso a mantenimiento preventivo y cambio de pasta térmica INV-LAP-0006 (bloquea préstamos RN-02)'),
-('44444444-4444-4444-8444-444444444418', '2026-02-27 14:15:00-05', 'Mantenimiento', '22222222-2222-4222-8222-222222222216', 'Disponible', 'Mantenimiento', NULL, '11111111-1111-4111-8111-111111111103', 'Limpieza de cabezales y kit de rodillos en impresora INV-IMP-0002 (RN-02)'),
-('44444444-4444-4444-8444-444444444419', '2026-03-02 08:45:00-05', 'Prestamo', '22222222-2222-4222-8222-222222222201', 'Disponible', 'Prestado', '11111111-1111-4111-8111-111111111104', '11111111-1111-4111-8111-111111111102', 'Asignación activa INV-LAP-0001 a Andrés Torres'),
-('44444444-4444-4444-8444-444444444420', '2026-03-04 09:10:00-05', 'Prestamo', '22222222-2222-4222-8222-222222222202', 'Disponible', 'Prestado', '11111111-1111-4111-8111-111111111105', '11111111-1111-4111-8111-111111111102', 'Asignación activa INV-LAP-0002 a Valeria Castillo'),
-('44444444-4444-4444-8444-444444444421', '2026-03-05 10:00:00-05', 'Prestamo', '22222222-2222-4222-8222-222222222204', 'Disponible', 'Prestado', '11111111-1111-4111-8111-111111111107', '11111111-1111-4111-8111-111111111103', 'Asignación activa INV-LAP-0004 a Gabriela Pereyra'),
-('44444444-4444-4444-8444-444444444422', '2026-03-06 09:30:00-05', 'Prestamo', '22222222-2222-4222-8222-222222222208', 'Disponible', 'Prestado', '11111111-1111-4111-8111-111111111106', '11111111-1111-4111-8111-111111111103', 'Asignación activa INV-PC-0002 a Diego Flores'),
-('44444444-4444-4444-8444-444444444423', '2026-03-07 11:00:00-05', 'Prestamo', '22222222-2222-4222-8222-222222222211', 'Disponible', 'Prestado', '11111111-1111-4111-8111-111111111104', '11111111-1111-4111-8111-111111111102', 'Asignación activa INV-MON-0001 a Andrés Torres'),
-('44444444-4444-4444-8444-444444444424', '2026-03-08 08:30:00-05', 'Prestamo', '22222222-2222-4222-8222-222222222218', 'Disponible', 'Prestado', '11111111-1111-4111-8111-111111111108', '11111111-1111-4111-8111-111111111102', 'Asignación activa INV-TAB-0001 a Jorge Paredes'),
-('44444444-4444-4444-8444-444444444425', '2026-03-09 10:15:00-05', 'Prestamo', '22222222-2222-4222-8222-222222222221', 'Disponible', 'Prestado', '11111111-1111-4111-8111-111111111105', '11111111-1111-4111-8111-111111111103', 'Asignación activa INV-PRO-0001 a Valeria Castillo');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333001', '2026-01-15', '2026-01-30', '2026-01-29', 'Asignación para sprint de microservicios de facturación.', 'Equipo devuelto con cargador original USB-C de 65W sin daños.', 'Devuelto', '11111111-1111-1111-1111-111111111004', '22222222-2222-2222-2222-222222222001', '11111111-1111-1111-1111-111111111002', '2026-01-15 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333002', '2026-02-02', '2026-02-18', '2026-02-17', 'Despliegue de entorno Docker local y pruebas de integración.', 'Recepción conforme; se realizó limpieza preventiva de teclado.', 'Devuelto', '11111111-1111-1111-1111-111111111005', '22222222-2222-2222-2222-222222222001', '11111111-1111-1111-1111-111111111003', '2026-02-02 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333003', '2026-01-18', '2026-02-02', '2026-02-01', 'Compilación de aplicaciones móviles iOS y Android corporativas.', 'Devuelto en perfecto estado estético y operativo con adaptador MagSafe 3.', 'Devuelto', '11111111-1111-1111-1111-111111111005', '22222222-2222-2222-2222-222222222002', '11111111-1111-1111-1111-111111111002', '2026-01-18 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333004', '2026-02-05', '2026-02-20', '2026-02-19', 'Pruebas de rendimiento en cliente bancario.', 'Devolución verificada por soporte técnico sin incidencias.', 'Devuelto', '11111111-1111-1111-1111-111111111004', '22222222-2222-2222-2222-222222222003', '11111111-1111-1111-1111-111111111002', '2026-02-05 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333005', '2026-02-22', '2026-03-05', '2026-03-04', 'Entrenamiento de modelo predictivo de rotación de clientes.', 'Equipo operativo, disco formateado según protocolo de seguridad.', 'Devuelto', '11111111-1111-1111-1111-111111111006', '22222222-2222-2222-2222-222222222003', '11111111-1111-1111-1111-111111111003', '2026-02-22 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333006', '2026-01-20', '2026-02-10', '2026-02-09', 'Segundo monitor para estación de arquitectura de software.', 'Panel IPS sin píxeles muertos, incluye cable USB-C y DisplayPort.', 'Devuelto', '11111111-1111-1111-1111-111111111004', '22222222-2222-2222-2222-222222222010', '11111111-1111-1111-1111-111111111002', '2026-01-20 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333007', '2026-01-25', '2026-02-08', '2026-02-07', 'Validación de diseño responsivo y accesibilidad en Safari iPadOS.', 'Pantalla impecable y Apple Pencil con carga al 100%.', 'Devuelto', '11111111-1111-1111-1111-111111111007', '22222222-2222-2222-2222-222222222017', '11111111-1111-1111-1111-111111111003', '2026-01-25 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333008', '2026-02-10', '2026-02-14', '2026-02-13', 'Sustentación de presupuesto trimestral ante directorio.', 'Proyector devuelto con control remoto, cable HDMI y maletín acolchado.', 'Devuelto', '11111111-1111-1111-1111-111111111008', '22222222-2222-2222-2222-222222222020', '11111111-1111-1111-1111-111111111002', '2026-02-10 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333009', '2026-02-12', '2026-02-26', '2026-02-25', 'Procesamiento de pipeline ETL y visualización analítica.', 'Se reporta calentamiento en ventilador derecho; pasa a Mantenimiento preventivo.', 'Devuelto', '11111111-1111-1111-1111-111111111006', '22222222-2222-2222-2222-222222222005', '11111111-1111-1111-1111-111111111003', '2026-02-12 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333010', '2026-01-12', '2026-01-28', '2026-01-27', 'Estación temporal de coordinación de operaciones.', 'Devuelto al finalizar contrato; equipo programado para baja por obsolescencia.', 'Devuelto', '11111111-1111-1111-1111-111111111009', '22222222-2222-2222-2222-222222222009', '11111111-1111-1111-1111-111111111001', '2026-01-12 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333011', '2026-02-15', '2026-03-01', '2026-02-28', 'Ejecución de suite automatizada Playwright y pruebas E2E.', 'Equipo verificado y reincorporado al stock disponible.', 'Devuelto', '11111111-1111-1111-1111-111111111007', '22222222-2222-2222-2222-222222222004', '11111111-1111-1111-1111-111111111002', '2026-02-15 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333012', '2026-01-14', '2026-01-24', '2026-01-23', 'Toma de inventario físico de activos fijos en sede central.', 'Equipo devuelto; batería degradada al 40%, se procede a baja lógica.', 'Devuelto', '11111111-1111-1111-1111-111111111008', '22222222-2222-2222-2222-222222222019', '11111111-1111-1111-1111-111111111003', '2026-01-14 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333013', '2026-03-02', '2026-03-30', NULL, 'Desarrollo del portal corporativo de gestión de activos TechAsset.', NULL, 'Activo', '11111111-1111-1111-1111-111111111004', '22222222-2222-2222-2222-222222222001', '11111111-1111-1111-1111-111111111002', '2026-03-02 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333014', '2026-03-04', '2026-04-02', NULL, 'Integración continua y arquitectura frontend React/TypeScript.', NULL, 'Activo', '11111111-1111-1111-1111-111111111005', '22222222-2222-2222-2222-222222222002', '11111111-1111-1111-1111-111111111003', '2026-03-04 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333015', '2026-03-05', '2026-04-10', NULL, 'Servidor local de inferencia y análisis estadístico en Ciencia de Datos.', NULL, 'Activo', '11111111-1111-1111-1111-111111111006', '22222222-2222-2222-2222-222222222007', '11111111-1111-1111-1111-111111111002', '2026-03-05 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333016', '2026-03-03', '2026-03-30', NULL, 'Monitor auxiliar 4K asignado a líder técnico de Desarrollo de Software.', NULL, 'Activo', '11111111-1111-1111-1111-111111111004', '22222222-2222-2222-2222-222222222010', '11111111-1111-1111-1111-111111111002', '2026-03-03 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333017', '2026-03-06', '2026-03-25', NULL, 'Certificación funcional multi-dispositivo del release 2026.1.', NULL, 'Activo', '11111111-1111-1111-1111-111111111007', '22222222-2222-2222-2222-222222222017', '11111111-1111-1111-1111-111111111003', '2026-03-06 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333018', '2026-03-01', '2026-03-28', NULL, 'Segmentación de VLANs en laboratorio de contingencia de red.', NULL, 'Activo', '11111111-1111-1111-1111-111111111003', '22222222-2222-2222-2222-222222222022', '11111111-1111-1111-1111-111111111001', '2026-03-01 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333019', '2026-03-12', '2026-03-26', NULL, 'Solicitud de laptop adicional para pruebas de carga y estrés del módulo de préstamos.', NULL, 'Pendiente', '11111111-1111-1111-1111-111111111004', '22222222-2222-2222-2222-222222222003', NULL, '2026-03-07 04:00:00-05');
+INSERT INTO public.prestamos ("Id", "FechaPrestamo", "FechaDevolucion", "FechaDevolucionReal", "Observacion", "ObservacionDevolucion", "EstadoPrestamo", "UsuarioId", "EquipoId", "ResponsableId", "FechaRegistro") VALUES ('33333333-3333-3333-3333-333333333020', '2026-03-13', '2026-03-27', NULL, 'Solicitud de equipo portátil para validación funcional en entorno de preproducción.', NULL, 'Pendiente', '11111111-1111-1111-1111-111111111007', '22222222-2222-2222-2222-222222222004', NULL, '2026-03-08 04:00:00-05');
+
+-- =============================================================================
+-- 8. DATOS SEMILLA: 44 MOVIMIENTOS DE INVENTARIO (Bitácora de Auditoría RF-17)
+-- =============================================================================
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('027dd513-24fa-4bdd-89fd-386718ebc80f', '2026-01-10 10:00:00-05', 'AltaEquipo', '22222222-2222-2222-2222-222222222006', 'Nuevo', 'Disponible', NULL, '11111111-1111-1111-1111-111111111001', 'Infraestructura y Soporte', 'Alta patrimonial inicial del activo INV-LAP-006 (ThinkPad X1 Carbon Gen 11).');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('02962388-0aaf-4273-8c5d-7ee57d67b544', '2026-02-19 11:40:00-05', 'Devolucion', '22222222-2222-2222-2222-222222222003', 'Prestado', 'Disponible', '11111111-1111-1111-1111-111111111004', '11111111-1111-1111-1111-111111111002', 'Desarrollo de Software', 'Devolución registrada (Alejandro Torres Mejía): Devolución verificada por soporte técnico sin incidencias.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('0b75ace4-04ae-447b-8cd1-66d281dab5a5', '2026-02-01 11:40:00-05', 'Devolucion', '22222222-2222-2222-2222-222222222002', 'Prestado', 'Disponible', '11111111-1111-1111-1111-111111111005', '11111111-1111-1111-1111-111111111002', 'Desarrollo de Software', 'Devolución registrada (Valeria Castillo Ríos): Devuelto en perfecto estado estético y operativo con adaptador MagSafe 3.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('1bc609a0-fec0-46d5-98b6-afb8206049d4', '2026-01-29 11:40:00-05', 'Devolucion', '22222222-2222-2222-2222-222222222001', 'Prestado', 'Disponible', '11111111-1111-1111-1111-111111111004', '11111111-1111-1111-1111-111111111002', 'Desarrollo de Software', 'Devolución registrada (Alejandro Torres Mejía): Equipo devuelto con cargador original USB-C de 65W sin daños.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('1c37ac45-e5f1-46e4-a1f0-77a5debf1885', '2026-01-10 09:00:00-05', 'AltaEquipo', '22222222-2222-2222-2222-222222222005', 'Nuevo', 'Disponible', NULL, '11111111-1111-1111-1111-111111111001', 'Infraestructura y Soporte', 'Alta patrimonial inicial del activo INV-LAP-005 (XPS 15 9530 OLED i9 32GB).');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('271caf9b-ebb4-4231-a95b-f1f47cc40867', '2026-03-04 11:40:00-05', 'Devolucion', '22222222-2222-2222-2222-222222222003', 'Prestado', 'Disponible', '11111111-1111-1111-1111-111111111006', '11111111-1111-1111-1111-111111111003', 'Ciencia de Datos e IA', 'Devolución registrada (Diego Flores Cáceres): Equipo operativo, disco formateado según protocolo de seguridad.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('2a9814fb-312a-4c43-9c97-5811996c39ac', '2026-02-15 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222004', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111007', '11111111-1111-1111-1111-111111111002', 'Aseguramiento de Calidad QA', 'Entrega en préstamo a Gabriela Pereyra Lozano: Ejecución de suite automatizada Playwright y pruebas E2E.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('2abcddea-8fb0-49c9-8192-4e6ddad281fe', '2026-01-23 11:40:00-05', 'Devolucion', '22222222-2222-2222-2222-222222222019', 'Prestado', 'Disponible', '11111111-1111-1111-1111-111111111008', '11111111-1111-1111-1111-111111111003', 'Finanzas y Contabilidad', 'Devolución registrada (Jorge Paredes Alarcón): Equipo devuelto; batería degradada al 40%, se procede a baja lógica.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('2caa6d94-c674-4625-adeb-973681b0d53a', '2026-01-24 13:00:00-05', 'BajaLogica', '22222222-2222-2222-2222-222222222019', 'Disponible', 'Baja', NULL, '11111111-1111-1111-1111-111111111001', 'Infraestructura y Soporte', 'RN-06: Baja lógica aplicada por desgaste severo de batería conservando trazabilidad histórica.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('2d887a73-0d3d-45e1-9119-a8dc1e28c368', '2026-02-26 06:30:00-05', 'CambioEstado', '22222222-2222-2222-2222-222222222015', 'Disponible', 'Mantenimiento', NULL, '11111111-1111-1111-1111-111111111002', 'Infraestructura y Soporte', 'Limpieza de cabezales de impresión y calibración de inyectores Epson.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('3576fd80-e119-470e-a1d0-a060e82a8fe9', '2026-03-06 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222017', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111007', '11111111-1111-1111-1111-111111111003', 'Aseguramiento de Calidad QA', 'Entrega en préstamo a Gabriela Pereyra Lozano: Certificación funcional multi-dispositivo del release 2026.1.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('39034b7c-6ac9-4405-a895-7445f3503ff6', '2026-03-01 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222022', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111003', '11111111-1111-1111-1111-111111111001', 'Infraestructura y Soporte', 'Entrega en préstamo a Marco Rodríguez Vargas: Segmentación de VLANs en laboratorio de contingencia de red.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('3bf0f3eb-df96-4cd6-8541-ef3b357bd050', '2026-01-10 05:00:00-05', 'AltaEquipo', '22222222-2222-2222-2222-222222222001', 'Nuevo', 'Disponible', NULL, '11111111-1111-1111-1111-111111111001', 'Infraestructura y Soporte', 'Alta patrimonial inicial del activo INV-LAP-001 (ThinkPad T14 Gen 4 i7 32GB).');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('44833a60-7e98-4a7c-9631-fc89d5e8c5aa', '2026-01-12 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222009', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111009', '11111111-1111-1111-1111-111111111001', 'Operaciones y Proyectos', 'Entrega en préstamo a Renato Vásquez Espinoza: Estación temporal de coordinación de operaciones.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('45c2e060-752a-494c-a84b-09427d3b6c7f', '2026-01-27 11:40:00-05', 'Devolucion', '22222222-2222-2222-2222-222222222009', 'Prestado', 'Disponible', '11111111-1111-1111-1111-111111111009', '11111111-1111-1111-1111-111111111001', 'Operaciones y Proyectos', 'Devolución registrada (Renato Vásquez Espinoza): Devuelto al finalizar contrato; equipo programado para baja por obsolescencia.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('5ae91986-d10c-4407-8c74-44df759262ce', '2026-03-03 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222010', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111004', '11111111-1111-1111-1111-111111111002', 'Desarrollo de Software', 'Entrega en préstamo a Alejandro Torres Mejía: Monitor auxiliar 4K asignado a líder técnico de Desarrollo de Software.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('74caa167-26f0-4ce4-aa1b-0fe5b3b53deb', '2026-01-10 08:00:00-05', 'AltaEquipo', '22222222-2222-2222-2222-222222222004', 'Nuevo', 'Disponible', NULL, '11111111-1111-1111-1111-111111111001', 'Infraestructura y Soporte', 'Alta patrimonial inicial del activo INV-LAP-004 (EliteBook 840 G10 Ryzen 7).');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('80cf81a6-d7f3-4ea4-a35b-97e5a50779f2', '2026-01-14 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222019', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111008', '11111111-1111-1111-1111-111111111003', 'Finanzas y Contabilidad', 'Entrega en préstamo a Jorge Paredes Alarcón: Toma de inventario físico de activos fijos en sede central.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('80e5d8fb-ab17-458a-adc7-9aeeef869362', '2026-02-02 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222001', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111005', '11111111-1111-1111-1111-111111111003', 'Desarrollo de Software', 'Entrega en préstamo a Valeria Castillo Ríos: Despliegue de entorno Docker local y pruebas de integración.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('80f9e110-59e3-434d-9d79-eae7d400859d', '2026-02-17 11:40:00-05', 'Devolucion', '22222222-2222-2222-2222-222222222001', 'Prestado', 'Disponible', '11111111-1111-1111-1111-111111111005', '11111111-1111-1111-1111-111111111003', 'Desarrollo de Software', 'Devolución registrada (Valeria Castillo Ríos): Recepción conforme; se realizó limpieza preventiva de teclado.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('8300ce93-2510-4166-97aa-bc28be61f4ba', '2026-02-27 10:00:00-05', 'CambioEstado', '22222222-2222-2222-2222-222222222021', 'Disponible', 'Mantenimiento', NULL, '11111111-1111-1111-1111-111111111003', 'Infraestructura y Soporte', 'Sustitución de lámpara óptica y filtro de aire en proyector BenQ.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('85967fb3-177c-43a2-a89e-09dec8eb30dd', '2026-01-10 13:00:00-05', 'AltaEquipo', '22222222-2222-2222-2222-222222222009', 'Nuevo', 'Disponible', NULL, '11111111-1111-1111-1111-111111111001', 'Infraestructura y Soporte', 'Alta patrimonial inicial del activo INV-PC-003 (ThinkCentre M90q Tiny i7).');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('88177d3c-d53d-4471-91ab-8d2c15d1ada1', '2026-03-04 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222002', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111005', '11111111-1111-1111-1111-111111111003', 'Desarrollo de Software', 'Entrega en préstamo a Valeria Castillo Ríos: Integración continua y arquitectura frontend React/TypeScript.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('8a6564b5-0b16-4906-9ebd-f37b12ed7c57', '2026-01-10 07:00:00-05', 'AltaEquipo', '22222222-2222-2222-2222-222222222003', 'Nuevo', 'Disponible', NULL, '11111111-1111-1111-1111-111111111001', 'Infraestructura y Soporte', 'Alta patrimonial inicial del activo INV-LAP-003 (Latitude 5540 Core i7 16GB).');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('8f9da15f-e172-4bfa-b0a2-d96205712183', '2026-03-02 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222001', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111004', '11111111-1111-1111-1111-111111111002', 'Desarrollo de Software', 'Entrega en préstamo a Alejandro Torres Mejía: Desarrollo del portal corporativo de gestión de activos TechAsset.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('908e40bb-9f91-49eb-9447-7ef83ec70ff6', '2026-02-25 11:40:00-05', 'Devolucion', '22222222-2222-2222-2222-222222222005', 'Prestado', 'Mantenimiento', '11111111-1111-1111-1111-111111111006', '11111111-1111-1111-1111-111111111003', 'Ciencia de Datos e IA', 'Devolución registrada (Diego Flores Cáceres): Se reporta calentamiento en ventilador derecho; pasa a Mantenimiento preventivo.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('955f8a19-7cb6-4d87-b15a-73cee355e380', '2026-02-05 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222003', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111004', '11111111-1111-1111-1111-111111111002', 'Desarrollo de Software', 'Entrega en préstamo a Alejandro Torres Mejía: Pruebas de rendimiento en cliente bancario.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('993ede42-128e-47e7-bdcf-b0a25f9e3691', '2026-01-25 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222017', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111007', '11111111-1111-1111-1111-111111111003', 'Aseguramiento de Calidad QA', 'Entrega en préstamo a Gabriela Pereyra Lozano: Validación de diseño responsivo y accesibilidad en Safari iPadOS.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('b0a03fac-464f-458a-ae2c-cafe09e9a592', '2026-01-20 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222010', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111004', '11111111-1111-1111-1111-111111111002', 'Desarrollo de Software', 'Entrega en préstamo a Alejandro Torres Mejía: Segundo monitor para estación de arquitectura de software.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('b1e10869-92c8-4e3b-a68f-0d1c4b43a6b6', '2026-01-28 12:15:00-05', 'BajaLogica', '22222222-2222-2222-2222-222222222009', 'Disponible', 'Baja', NULL, '11111111-1111-1111-1111-111111111001', 'Infraestructura y Soporte', 'RN-06: Baja lógica aplicada tras cumplir vida útil contable conservando historial de préstamos.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('bb8e2e23-5ad0-49b9-a272-fa6828219bee', '2026-03-05 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222007', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111006', '11111111-1111-1111-1111-111111111002', 'Ciencia de Datos e IA', 'Entrega en préstamo a Diego Flores Cáceres: Servidor local de inferencia y análisis estadístico en Ciencia de Datos.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('bd47282c-b701-42a2-99cb-69abae9b9747', '2026-02-12 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222005', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111006', '11111111-1111-1111-1111-111111111003', 'Ciencia de Datos e IA', 'Entrega en préstamo a Diego Flores Cáceres: Procesamiento de pipeline ETL y visualización analítica.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('c4260d46-d1b6-4cd9-989f-55cc531247fa', '2026-01-10 14:00:00-05', 'AltaEquipo', '22222222-2222-2222-2222-222222222010', 'Nuevo', 'Disponible', NULL, '11111111-1111-1111-1111-111111111001', 'Infraestructura y Soporte', 'Alta patrimonial inicial del activo INV-MON-001 (UltraSharp 27 4K USB-C Hub U2723QE).');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('c44cb001-a9fa-4e90-a8eb-551e4b28abfd', '2026-02-22 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222003', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111006', '11111111-1111-1111-1111-111111111003', 'Ciencia de Datos e IA', 'Entrega en préstamo a Diego Flores Cáceres: Entrenamiento de modelo predictivo de rotación de clientes.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('c4889f48-352e-4187-86bf-21c0f05722c6', '2026-01-10 06:00:00-05', 'AltaEquipo', '22222222-2222-2222-2222-222222222002', 'Nuevo', 'Disponible', NULL, '11111111-1111-1111-1111-111111111001', 'Infraestructura y Soporte', 'Alta patrimonial inicial del activo INV-LAP-002 (MacBook Pro 14 M3 Pro 18GB).');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('ca73313f-3cbe-48f8-9afe-e28aa02aa4d3', '2026-02-28 11:40:00-05', 'Devolucion', '22222222-2222-2222-2222-222222222004', 'Prestado', 'Disponible', '11111111-1111-1111-1111-111111111007', '11111111-1111-1111-1111-111111111002', 'Aseguramiento de Calidad QA', 'Devolución registrada (Gabriela Pereyra Lozano): Equipo verificado y reincorporado al stock disponible.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('ce5bf0d4-fc2b-4fb4-8824-6c17bcda43cc', '2026-02-07 11:40:00-05', 'Devolucion', '22222222-2222-2222-2222-222222222017', 'Prestado', 'Disponible', '11111111-1111-1111-1111-111111111007', '11111111-1111-1111-1111-111111111003', 'Aseguramiento de Calidad QA', 'Devolución registrada (Gabriela Pereyra Lozano): Pantalla impecable y Apple Pencil con carga al 100%.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('e29c9b8b-7cd2-42a0-bfc6-a92a0f4b4c6c', '2026-01-18 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222002', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111005', '11111111-1111-1111-1111-111111111002', 'Desarrollo de Software', 'Entrega en préstamo a Valeria Castillo Ríos: Compilación de aplicaciones móviles iOS y Android corporativas.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('ead2a3de-c957-4f97-befa-21910345a6fd', '2026-02-09 11:40:00-05', 'Devolucion', '22222222-2222-2222-2222-222222222010', 'Prestado', 'Disponible', '11111111-1111-1111-1111-111111111004', '11111111-1111-1111-1111-111111111002', 'Desarrollo de Software', 'Devolución registrada (Alejandro Torres Mejía): Panel IPS sin píxeles muertos, incluye cable USB-C y DisplayPort.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('ebbc1db4-a149-4db7-9fb2-6914373348e7', '2026-01-10 11:00:00-05', 'AltaEquipo', '22222222-2222-2222-2222-222222222007', 'Nuevo', 'Disponible', NULL, '11111111-1111-1111-1111-111111111001', 'Infraestructura y Soporte', 'Alta patrimonial inicial del activo INV-PC-001 (OptiPlex 7010 Tower i7).');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('f0924615-7927-4eb8-99be-b3198015fc58', '2026-01-10 12:00:00-05', 'AltaEquipo', '22222222-2222-2222-2222-222222222008', 'Nuevo', 'Disponible', NULL, '11111111-1111-1111-1111-111111111001', 'Infraestructura y Soporte', 'Alta patrimonial inicial del activo INV-PC-002 (ProDesk 400 G9 SFF i5).');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('f22a0cef-e267-40b0-81de-a62295bb1f9c', '2026-01-15 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222001', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111004', '11111111-1111-1111-1111-111111111002', 'Desarrollo de Software', 'Entrega en préstamo a Alejandro Torres Mejía: Asignación para sprint de microservicios de facturación.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('f5b28e7a-f331-4ed1-8fef-564397209b36', '2026-02-13 11:40:00-05', 'Devolucion', '22222222-2222-2222-2222-222222222020', 'Prestado', 'Disponible', '11111111-1111-1111-1111-111111111008', '11111111-1111-1111-1111-111111111002', 'Finanzas y Contabilidad', 'Devolución registrada (Jorge Paredes Alarcón): Proyector devuelto con control remoto, cable HDMI y maletín acolchado.');
+INSERT INTO public.movimientos_inventario ("Id", "Fecha", "TipoMovimiento", "EquipoId", "EstadoAnterior", "EstadoNuevo", "UsuarioId", "ResponsableId", "Area", "Observacion") VALUES ('ffc65e47-756b-4836-b4b4-8a1b6b73d7e6', '2026-02-10 05:15:00-05', 'Prestamo', '22222222-2222-2222-2222-222222222020', 'Disponible', 'Prestado', '11111111-1111-1111-1111-111111111008', '11111111-1111-1111-1111-111111111002', 'Finanzas y Contabilidad', 'Entrega en préstamo a Jorge Paredes Alarcón: Sustentación de presupuesto trimestral ante directorio.');
