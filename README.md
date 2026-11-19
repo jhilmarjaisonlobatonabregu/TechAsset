@@ -33,7 +33,7 @@ Innovatech Solutions S.A.C. administraba su parque tecnológico (laptops, comput
 ┌──────────────────────────────────▼─────────────────────────────────┐
 │  BASE DE DATOS  PostgreSQL 14+  │  Base de datos: techasset_db     │
 │  Tablas: usuarios · equipos · prestamos · movimientos_inventario   │
-│  Índices únicos: correo (RN-08), codigo_patrimonial (RN-07),       │
+│  Índices únicos: "Correo" (RN-08), "CodigoPatrimonial" (RN-07),    │
 │  préstamo activo único por equipo (RN-01)                          │
 └────────────────────────────────────────────────────────────────────┘
 ```
@@ -53,7 +53,7 @@ Innovatech Solutions S.A.C. administraba su parque tecnológico (laptops, comput
 ## 4. Instalación y Ejecución Paso a Paso
 
 ### Paso 1 — Base de datos PostgreSQL
-El backend crea automáticamente la base de datos y carga los datos semilla al iniciar (`DatabaseSeeder.SeedAsync`). Si desea crearla manualmente con el script SQL oficial:
+El backend crea automáticamente la base de datos y carga los datos semilla al iniciar (`DatabaseSeeder.SeedAsync`). Si desea crearla manualmente con el script SQL oficial (directamente compatible con la API: 9 usuarios, 24 equipos, 20 préstamos y 44 movimientos):
 
 ```bash
 psql -U postgres -c "CREATE DATABASE techasset_db;"
@@ -125,4 +125,4 @@ dotnet test backend/TechAsset.sln
 | Informe Técnico, Evidencias, Casos de Prueba y Pregunta de Reflexión | [`docs/informe-tecnico.md`](docs/informe-tecnico.md) |
 | Guion de Sustentación (5–7 min, 7 escenarios mínimos) | [`docs/guion-sustentacion.md`](docs/guion-sustentacion.md) |
 | Script DDL + Datos Semilla PostgreSQL | [`database/init_techasset.sql`](database/init_techasset.sql) |
-| Colección de Postman (50 peticiones y tests automatizados) | [`postman/TechAsset.postman_collection.json`](postman/TechAsset.postman_collection.json) |
+| Colección de Postman (52 peticiones y 81 aserciones automatizadas) | [`postman/TechAsset.postman_collection.json`](postman/TechAsset.postman_collection.json) |

@@ -14,12 +14,12 @@ Con el objetivo de garantizar mantenibilidad, legibilidad y consistencia entre e
 
 | Elemento de Software | Convención | Ejemplo en Backend (.NET 8) | Ejemplo en Frontend (React + TS) |
 | :--- | :---: | :--- | :--- |
-| **Clases, Entidades, Interfaces y Componentes React** | `PascalCase` | `Equipo`, `PrestamoService`, `IEquipoRepository` | `EquiposPage.tsx`, `DataTable.tsx`, `StatusBadge.tsx` |
+| **Clases, Entidades, Interfaces y Componentes React** | `PascalCase` | `Equipo`, `PrestamoService`, `IEquipoService` | `EquiposPage.tsx`, `DataTable.tsx`, `Badge.tsx` |
 | **Métodos en C# y Propiedades de Entidad/DTO** | `PascalCase` | `RegistrarPrestamoAsync()`, `CodigoPatrimonial` | — |
 | **Funciones, Variables Locales y Propiedades JSON/TS** | `camelCase` | `equipoExistente`, `fechaActual` | `codigoPatrimonial`, `registrarDevolucion()` |
-| **Custom Hooks de React** | `camelCase` con prefijo `use` | — | `useApi.ts`, `useFormValidation.ts` |
+| **Custom Hooks de React** | `camelCase` con prefijo `use` | — | `useApi.ts`, `useCarga.ts`, `useForm.ts` |
 | **Constantes Globales y Variables de Entorno** | `UPPER_SNAKE_CASE` | `ROLES_AUTORIZADOS_INVENTARIO` | `VITE_API_URL`, `CATEGORIAS_OFICIALES` |
-| **Tablas, Columnas e Índices en PostgreSQL** | `snake_case` | `movimientos_inventario`, `codigo_patrimonial`, `ix_prestamos_equipo_activo` | — |
+| **Tablas, Columnas e Índices en PostgreSQL** | `snake_case` (tablas/índice parcial) y `"PascalCase"` EF Core (columnas) | `movimientos_inventario`, `"CodigoPatrimonial"`, `ix_prestamos_equipo_activo` | — |
 | **Rutas de Endpoints REST** | `kebab-case` (plural) | `/api/equipos`, `/api/reportes/equipos-mas-utilizados` | — |
 
 ### 1.2 Reglas de Calidad de Código
@@ -29,7 +29,7 @@ Con el objetivo de garantizar mantenibilidad, legibilidad y consistencia entre e
 2. **Responsabilidad única por archivo:**
    - Cada entidad de dominio, DTO, servicio, controlador o componente UI reutilizable reside en su propio archivo fuente claramente identificado.
 3. **Manejo uniforme de errores:**
-   - Ningún controlador expone trazas de pila (`stack traces`) crudas. Se utiliza el patrón `Result<T>` en la capa de Aplicación junto con el `ExceptionHandlingMiddleware` que devuelve respuestas JSON estandarizadas con el código de regla de negocio (`RN-01` a `RN-10`).
+   - Ningún controlador expone trazas de pila (`stack traces`) crudas. Las validaciones estructurales se ejecutan con `FluentValidation` y las reglas de negocio lanzan `ReglaNegocioException`, capturadas por `ManejoErroresMiddleware` que devuelve respuestas JSON estandarizadas con el código (`RN-01` a `RN-10`).
 
 ---
 
@@ -41,41 +41,41 @@ El repositorio aplica una separación limpia entre el servidor de aplicaciones (
 TechAsset/
 ├── backend/
 │   ├── TechAsset.sln
-│   ├── src/
-│   │   ├── TechAsset.Domain/                 # Capa 1: Núcleo de Dominio (Sin dependencias externas)
-│   │   │   ├── Entities/                     # Usuario.cs, Equipo.cs, Prestamo.cs, MovimientoInventario.cs
-│   │   │   ├── Enums/                        # RolUsuario.cs, EstadoEquipo.cs, EstadoPrestamo.cs
-│   │   │   └── Common/                       # Result.cs, DomainException.cs
-│   │   ├── TechAsset.Application/            # Capa 2: Casos de Uso y Reglas de Negocio
-│   │   │   ├── DTOs/                         # Contratos de entrada/salida (Auth, Usuarios, Equipos, Prestamos, Reportes)
-│   │   │   ├── Interfaces/                   # Contratos de repositorios y servicios
-│   │   │   └── Services/                     # AuthService, UsuarioService, EquipoService, PrestamoService, ReporteService
-│   │   ├── TechAsset.Infrastructure/         # Capa 3: Persistencia EF Core y Seguridad JWT
-│   │   │   ├── Data/                         # TechAssetDbContext.cs, DbSeeder.cs
-│   │   │   ├── Repositories/                 # Implementación de repositorios EF Core
-│   │   │   └── Security/                     # JwtTokenGenerator.cs, PasswordHasher.cs
-│   │   └── TechAsset.API/                    # Capa 4: Presentación HTTP REST
-│   │       ├── Controllers/                  # AuthController, UsuariosController, EquiposController, PrestamosController, ReportesController
-│   │       ├── Middleware/                   # ExceptionHandlingMiddleware.cs
-│   │       └── Program.cs
-│   └── tests/
-│       └── TechAsset.Tests/                  # Suite de pruebas unitarias xUnit (RN-01 a RN-10 y servicios)
+│   ├── TechAsset.Domain/                 # Capa 1: Núcleo de Dominio (Sin dependencias externas)
+│   │   ├── Constants/                    # CatalogosDominio.cs (Roles, Estados, Categorías, Áreas, Mensajes)
+│   │   ├── Entities/                     # Usuario.cs, Equipo.cs, Prestamo.cs, MovimientoInventario.cs
+│   │   └── Exceptions/                   # ReglaNegocioException.cs
+│   ├── TechAsset.Application/            # Capa 2: Casos de Uso y Reglas de Negocio
+│   │   ├── Common/                       # ErrorRespuestaDto.cs
+│   │   ├── DTOs/                         # Contratos de entrada/salida (Auth, Usuarios, Equipos, Prestamos, Reportes)
+│   │   ├── Interfaces/                   # IServices.cs (contratos de servicios)
+│   │   └── Validators/                   # Validadores.cs (FluentValidation)
+│   ├── TechAsset.Infrastructure/         # Capa 3: Persistencia EF Core y Seguridad JWT
+│   │   ├── Persistence/                  # TechAssetDbContext.cs, DatabaseSeeder.cs
+│   │   ├── Security/                     # SecurityServices.cs (JwtTokenGenerator, PasswordHasher)
+│   │   └── Services/                     # AuthService, UsuarioService, EquipoService, PrestamoService, ReporteService
+│   └── TechAsset.API/                    # Capa 4: Presentación HTTP REST
+│       ├── Controllers/                  # ApiControllerBase, AuthController, UsuariosController, EquiposController, PrestamosController, DashboardController, ReportesController
+│       ├── Middleware/                   # ManejoErroresMiddleware.cs
+│       └── Program.cs
+├── tests/
+│   └── TechAsset.Tests/                  # Suite de pruebas unitarias xUnit (39 pruebas: RN-01 a RN-10 y servicios)
 ├── frontend/
 │   └── src/
 │       ├── components/
-│       │   ├── ui/                           # 13 componentes UI reutilizables (Button, DataTable, Modal, FormField, etc.)
-│       │   └── layout/                       # AppLayout, Sidebar, Topbar, ProtectedRoute
-│       ├── context/                          # AuthContext.tsx (Sesión JWT y RBAC)
-│       ├── hooks/                            # useApi.ts, useFormValidation.ts
-│       ├── pages/                            # LoginPage, DashboardPage, UsuariosPage, EquiposPage, PrestamosPage, ReportesPage
-│       ├── services/                         # apiClient.ts y servicios tipados por módulo
-│       ├── types/                            # Interfaces y contratos TypeScript
-│       └── utils/                            # Formateadores de fechas, estados y exportación CSV
+│       │   ├── ui/                       # 13 componentes UI reutilizables (Button, DataTable, Modal, FormField, Badge, etc.)
+│       │   └── layout/                   # AppLayout, Sidebar, Header
+│       ├── context/                      # AuthContext.tsx, ThemeContext.tsx
+│       ├── hooks/                        # useApi.ts, useCarga.ts, useDebounce.ts, useForm.ts
+│       ├── pages/                        # LandingPage, LoginPage, DashboardPage, UsuariosPage, EquiposPage, PrestamosPage, ReportesPage
+│       ├── services/                     # apiClient.ts y servicios tipados por módulo
+│       ├── types/                        # Interfaces y contratos TypeScript
+│       └── utils/                        # Formateadores de fechas, esquemas Zod y exportación CSV
 ├── database/
-│   └── init_techasset.sql                    # Script DDL PostgreSQL + Datos Semilla
+│   └── init_techasset.sql                # Script DDL PostgreSQL + Datos Semilla (9 usuarios, 24 equipos, 20 préstamos, 44 movimientos)
 ├── postman/
-│   └── TechAsset.postman_collection.json     # Colección de pruebas de API REST y Reglas RN-01..RN-10
-└── docs/                                     # Documentación académica y técnica del proyecto
+│   └── TechAsset.postman_collection.json # Colección de pruebas de API REST (52 peticiones, 81 aserciones)
+└── docs/                                 # Documentación académica y técnica del proyecto
 ```
 
 ---
@@ -107,7 +107,7 @@ Todos los mensajes de confirmación siguen la especificación `<tipo>(<alcance>)
 | 6 | ¿Los endpoints protegidos cuentan con el atributo `[Authorize]` y la restricción de roles (`RN-09`)? | Sí |
 | 7 | ¿El frontend reutiliza los componentes de `src/components/ui/` en lugar de duplicar HTML/Tailwind? | Sí |
 | 8 | ¿Los formularios validan campos obligatorios y reglas de fecha (`RN-04`) antes de enviar la petición HTTP? | Sí |
-| 9 | ¿Se manejan adecuadamente los estados de carga (`LoadingSpinner`), lista vacía (`EmptyState`) y error (`AlertBanner`)? | Sí |
+| 9 | ¿Se manejan adecuadamente los estados de carga (`Spinner`), lista vacía (`EmptyState`) y error (`Toast`)? | Sí |
 | 10 | ¿El proyecto Backend compila con 0 errores (`dotnet build`) y pasan todas las pruebas (`dotnet test`)? | Sí |
 | 11 | ¿El proyecto Frontend compila con 0 errores de TypeScript (`npm run build`)? | Sí |
 | 12 | ¿No existen credenciales, secretos expuestos ni bloques `TODO` o código comentado muerto? | Sí |
@@ -139,7 +139,7 @@ flowchart LR
     end
 
     subgraph ModuloPrestamos["3. Gestion de Prestamos y Devoluciones (RF-09 a RF-12)"]
-        RF09["RF-09: Registrar prestamo de equipo"]
+        RF09["RF-09: Solicitar, registrar y aprobar prestamo"]
         RF10["RF-10: Registrar devolucion de equipo"]
         RF11["RF-11: Consultar prestamos activos"]
         RF12["RF-12: Consultar historial de prestamos"]
@@ -187,6 +187,7 @@ flowchart LR
     RespTI --> RF17
 
     Colab --> RF08
+    Colab --> RF09
     Colab --> RF11
     Colab --> RF12
     Colab --> RF13
@@ -209,9 +210,8 @@ classDiagram
         +string PasswordHash
         +DateTime FechaRegistro
         +NombreCompleto() string
-        +PuedeRecibirPrestamo() bool
-        +EsResponsableAutorizado() bool
-        +Deshabilitar() void
+        +Actualizar(nombres, apellidos, correo, area, rol) void
+        +CambiarEstado(bool nuevoEstado, string rolActor) void
     }
 
     class Equipo {
@@ -222,10 +222,12 @@ classDiagram
         +string Marca
         +string Estado
         +DateTime FechaRegistro
-        +ValidarDisponibilidadParaPrestamo() Result
+        +ValidarDisponibleParaPrestamo() void
         +MarcarComoPrestado() void
-        +MarcarComoDisponible() void
-        +CambiarEstado(string nuevoEstado) Result
+        +MarcarComoDevuelto(string estadoDestino) void
+        +CambiarEstado(string nuevoEstado) void
+        +Actualizar(...) void
+        +DarDeBajaLogica(bool aplicarBajaLogica) void
     }
 
     class Prestamo {
@@ -238,9 +240,12 @@ classDiagram
         +string EstadoPrestamo
         +Guid UsuarioId
         +Guid EquipoId
-        +Guid ResponsableId
-        +ValidarFechas(DateOnly prestamo, DateOnly devolucion) Result
-        +RegistrarDevolucion(DateOnly fechaReal, string observacion) Result
+        +Guid? ResponsableId
+        +DateTime FechaRegistro
+        +Crear(...) Prestamo
+        +CrearSolicitud(...) Prestamo
+        +Aprobar(Guid responsableId) void
+        +RegistrarDevolucion(string obs, DateOnly? fechaReal) void
     }
 
     class MovimientoInventario {
@@ -252,50 +257,55 @@ classDiagram
         +string EstadoNuevo
         +Guid? UsuarioId
         +Guid? ResponsableId
+        +string Area
         +string Observacion
     }
 
     class IUsuarioService {
         <<interface>>
-        +ListarUsuariosAsync(FiltroUsuarioDto filtro)
-        +CrearUsuarioAsync(CrearUsuarioDto dto)
-        +ActualizarUsuarioAsync(Guid id, ActualizarUsuarioDto dto)
-        +CambiarEstadoUsuarioAsync(Guid id, bool activo)
+        +ListarAsync(...)
+        +ObtenerPorIdAsync(Guid id)
+        +CrearAsync(CrearUsuarioDto dto)
+        +ActualizarAsync(Guid id, ActualizarUsuarioDto dto)
+        +CambiarEstadoAsync(Guid id, bool nuevoEstado, string rolActor)
     }
 
     class IEquipoService {
         <<interface>>
-        +ListarEquiposAsync(FiltroEquipoDto filtro)
-        +CrearEquipoAsync(CrearEquipoDto dto, Guid responsableId)
-        +ActualizarEquipoAsync(Guid id, ActualizarEquipoDto dto)
-        +CambiarEstadoAsync(Guid id, CambiarEstadoEquipoDto dto, Guid responsableId)
-        +EliminarEquipoAsync(Guid id)
+        +ListarAsync(...)
+        +ObtenerPorIdAsync(Guid id)
+        +CrearAsync(CrearEquipoDto dto, Guid? responsableId)
+        +ActualizarAsync(Guid id, ActualizarEquipoDto dto, Guid? responsableId)
+        +CambiarEstadoAsync(Guid id, CambiarEstadoEquipoDto dto, Guid? responsableId)
+        +EliminarOBajaLogicaAsync(Guid id, bool aplicarBajaLogica)
     }
 
     class IPrestamoService {
         <<interface>>
-        +ListarPrestamosAsync(FiltroPrestamoDto filtro)
-        +ListarPrestamosActivosAsync()
-        +RegistrarPrestamoAsync(CrearPrestamoDto dto)
-        +RegistrarDevolucionAsync(Guid prestamoId, RegistrarDevolucionDto dto, Guid responsableId)
+        +ListarAsync(...)
+        +ListarActivosAsync()
+        +ObtenerPorIdAsync(Guid id)
+        +RegistrarPrestamoAsync(CrearPrestamoDto dto, string? rolActor)
+        +AprobarPrestamoAsync(Guid prestamoId, Guid responsableId, string? rolActor)
+        +RegistrarDevolucionAsync(Guid prestamoId, RegistrarDevolucionDto dto, Guid? responsableId)
     }
 
     class IReporteService {
         <<interface>>
         +ObtenerDashboardAsync()
-        +ObtenerEquiposPorEstadoAsync()
+        +ObtenerEquiposPorEstadoAsync(string? estado)
         +ObtenerEquiposMasUtilizadosAsync(int top)
         +ObtenerPrestamosPorAreaAsync()
-        +ObtenerHistorialMovimientosAsync(Guid? equipoId, string? tipo)
+        +ObtenerMovimientosAsync(...)
     }
 
     Usuario "1" --> "0..*" Prestamo : recibe (UsuarioId)
     Usuario "1" --> "0..*" Prestamo : autoriza (ResponsableId)
     Equipo "1" --> "0..*" Prestamo : se asigna en
     Equipo "1" --> "1..*" MovimientoInventario : registra historial
-    IPrestamoService ..> Usuario : valida RN-05 y RN-10
+    IPrestamoService ..> Usuario : valida RN-05 y USR-INACTIVO
     IPrestamoService ..> Equipo : valida RN-01, RN-02 y RN-03
-    IPrestamoService ..> Prestamo : valida RN-04
+    IPrestamoService ..> Prestamo : valida RN-04 y RN-10
     IEquipoService ..> Equipo : valida RN-06 y RN-07
     IUsuarioService ..> Usuario : valida RN-08 y RN-09
 ```
@@ -306,58 +316,60 @@ classDiagram
 
 ```mermaid
 erDiagram
-    USUARIOS ||--o{ PRESTAMOS : "recibe (usuario_id)"
-    USUARIOS ||--o{ PRESTAMOS : "autoriza (responsable_id)"
-    EQUIPOS ||--o{ PRESTAMOS : "asignado_en (equipo_id)"
-    EQUIPOS ||--o{ MOVIMIENTOS_INVENTARIO : "audita (equipo_id)"
-    USUARIOS ||--o{ MOVIMIENTOS_INVENTARIO : "involucra (usuario_id)"
-    USUARIOS ||--o{ MOVIMIENTOS_INVENTARIO : "ejecuta (responsable_id)"
+    USUARIOS ||--o{ PRESTAMOS : "recibe (UsuarioId)"
+    USUARIOS ||--o{ PRESTAMOS : "autoriza (ResponsableId)"
+    EQUIPOS ||--o{ PRESTAMOS : "asignado_en (EquipoId)"
+    EQUIPOS ||--o{ MOVIMIENTOS_INVENTARIO : "audita (EquipoId)"
+    USUARIOS ||--o{ MOVIMIENTOS_INVENTARIO : "involucra (UsuarioId)"
+    USUARIOS ||--o{ MOVIMIENTOS_INVENTARIO : "ejecuta (ResponsableId)"
 
     USUARIOS {
-        uuid id PK
-        varchar_100 nombres "NOT NULL"
-        varchar_100 apellidos "NOT NULL"
-        varchar_150 correo UK "NOT NULL UNIQUE (RN-08)"
-        varchar_100 area "NOT NULL"
-        boolean estado "NOT NULL DEFAULT TRUE (RN-10)"
-        varchar_50 rol "NOT NULL CHECK (RN-09)"
-        varchar_255 password_hash "NOT NULL"
-        timestamptz fecha_registro "NOT NULL DEFAULT NOW()"
+        uuid Id PK
+        varchar_100 Nombres "NOT NULL"
+        varchar_100 Apellidos "NOT NULL"
+        varchar_150 Correo UK "NOT NULL UNIQUE (RN-08)"
+        varchar_100 Area "NOT NULL"
+        boolean Estado "NOT NULL"
+        varchar_50 Rol "NOT NULL CHECK (RN-09)"
+        varchar_255 PasswordHash "NOT NULL"
+        timestamptz FechaRegistro "NOT NULL"
     }
 
     EQUIPOS {
-        uuid id PK
-        varchar_50 codigo_patrimonial UK "NOT NULL UNIQUE (RN-07)"
-        varchar_100 nombre "NOT NULL"
-        varchar_50 categoria "NOT NULL CHECK (7 categorias)"
-        varchar_50 marca "NOT NULL"
-        varchar_30 estado "NOT NULL CHECK (Disponible, Prestado, Mantenimiento, Baja)"
-        timestamptz fecha_registro "NOT NULL DEFAULT NOW()"
+        uuid Id PK
+        varchar_50 CodigoPatrimonial UK "NOT NULL UNIQUE (RN-07)"
+        varchar_100 Nombre "NOT NULL"
+        varchar_50 Categoria "NOT NULL CHECK (7 categorias)"
+        varchar_50 Marca "NOT NULL"
+        varchar_30 Estado "NOT NULL CHECK (Disponible, Prestado, Mantenimiento, Baja)"
+        timestamptz FechaRegistro "NOT NULL"
     }
 
     PRESTAMOS {
-        uuid id PK
-        date fecha_prestamo "NOT NULL"
-        date fecha_devolucion "NOT NULL CHECK > fecha_prestamo (RN-04)"
-        date fecha_devolucion_real "NULL"
-        text observacion "NOT NULL"
-        text observacion_devolucion "NULL"
-        varchar_30 estado_prestamo "NOT NULL CHECK (Pendiente, Activo, Devuelto) + UK parcial sobre Activo (RN-01)"
-        uuid usuario_id FK "NOT NULL REFERENCES usuarios(id)"
-        uuid equipo_id FK "NOT NULL REFERENCES equipos(id) ON DELETE RESTRICT (RN-06)"
-        uuid responsable_id FK "NULL en Pendiente / NOT NULL en Activo y Devuelto REFERENCES usuarios(id) (RN-05)"
+        uuid Id PK
+        date FechaPrestamo "NOT NULL"
+        date FechaDevolucion "NOT NULL CHECK > FechaPrestamo (RN-04)"
+        date FechaDevolucionReal "NULL"
+        text Observacion "NOT NULL"
+        text ObservacionDevolucion "NULL"
+        varchar_30 EstadoPrestamo "NOT NULL CHECK (Pendiente, Activo, Devuelto) + UK parcial sobre Activo (RN-01)"
+        uuid UsuarioId FK "NOT NULL REFERENCES usuarios(Id)"
+        uuid EquipoId FK "NOT NULL REFERENCES equipos(Id) ON DELETE RESTRICT (RN-06)"
+        uuid ResponsableId FK "NULL en Pendiente / NOT NULL en Activo y Devuelto REFERENCES usuarios(Id) (RN-05)"
+        timestamptz FechaRegistro "NOT NULL"
     }
 
     MOVIMIENTOS_INVENTARIO {
-        uuid id PK
-        timestamptz fecha "NOT NULL DEFAULT NOW()"
-        varchar_40 tipo_movimiento "NOT NULL CHECK (Alta, Prestamo, Devolucion, Mantenimiento, Baja)"
-        uuid equipo_id FK "NOT NULL REFERENCES equipos(id)"
-        varchar_30 estado_anterior "NOT NULL"
-        varchar_30 estado_nuevo "NOT NULL"
-        uuid usuario_id FK "NULL REFERENCES usuarios(id)"
-        uuid responsable_id FK "NULL REFERENCES usuarios(id)"
-        text observacion "NOT NULL"
+        uuid Id PK
+        timestamptz Fecha "NOT NULL"
+        varchar_40 TipoMovimiento "NOT NULL CHECK (AltaEquipo, ActualizacionEquipo, Prestamo, Devolucion, CambioEstado, BajaLogica)"
+        uuid EquipoId FK "NOT NULL REFERENCES equipos(Id)"
+        varchar_30 EstadoAnterior "NOT NULL"
+        varchar_30 EstadoNuevo "NOT NULL"
+        uuid UsuarioId FK "NULL REFERENCES usuarios(Id)"
+        uuid ResponsableId FK "NULL REFERENCES usuarios(Id)"
+        varchar_100 Area "NOT NULL"
+        text Observacion "NOT NULL"
     }
 ```
 
@@ -368,9 +380,9 @@ erDiagram
 ```mermaid
 flowchart TB
     subgraph ClienteWeb["Capa de Presentacion Cliente (React 19 + TypeScript + Vite + Tailwind CSS)"]
-        Pages["Paginas Orquestadoras (LoginPage, DashboardPage, UsuariosPage, EquiposPage, PrestamosPage, ReportesPage)"]
-        UIComponents["13 Componentes UI Reutilizables (DataTable, Modal, FormField, StatCard, StatusBadge, SearchFilterBar)"]
-        Hooks["Custom Hooks y Contexto (AuthContext, useApi, useFormValidation + Esquemas Zod)"]
+        Pages["Paginas Orquestadoras (LandingPage, LoginPage, DashboardPage, UsuariosPage, EquiposPage, PrestamosPage, ReportesPage)"]
+        UIComponents["13 Componentes UI Reutilizables (DataTable, Modal, FormField, Badge, Card, ConfirmDialog)"]
+        Hooks["Custom Hooks y Contexto (AuthContext, useApi, useCarga, useForm + Esquemas Zod)"]
         ApiClient["Cliente HTTP Centralizado (services/apiClient.ts con Interceptor JWT Bearer)"]
         Pages --> UIComponents
         Pages --> Hooks
@@ -379,31 +391,31 @@ flowchart TB
 
     subgraph ServidorAPI["Servidor Backend ASP.NET Core 8 (Clean Architecture)"]
         subgraph CapaAPI["TechAsset.API (Entrada HTTP REST)"]
-            Middleware["ExceptionHandlingMiddleware + JWT Bearer Authentication + RBAC Policies"]
-            Controllers["Thin Controllers (AuthController, UsuariosController, EquiposController, PrestamosController, ReportesController)"]
+            Middleware["ManejoErroresMiddleware + JWT Bearer Authentication + RBAC Policies"]
+            Controllers["6 Thin Controllers (Auth, Usuarios, Equipos, Prestamos, Dashboard, Reportes)"]
             Middleware --> Controllers
         end
 
-        subgraph CapaApplication["TechAsset.Application (Logica de Aplicacion y Casos de Uso)"]
-            Services["Servicios de Dominio/Aplicacion (UsuarioService, EquipoService, PrestamoService, ReporteService)"]
-            Validators["Motor de Reglas de Negocio (RN-01 a RN-10) + Patron Result<T>"]
+        subgraph CapaApplication["TechAsset.Application (Contratos y Validadores)"]
+            Services["Interfaces de Servicio (IAuthService, IUsuarioService, IEquipoService, IPrestamoService, IReporteService)"]
+            Validators["Validadores FluentValidation (Validadores.cs) y DTOs"]
             Controllers --> Services
-            Services --> Validators
+            Controllers --> Validators
         end
 
         subgraph CapaDomain["TechAsset.Domain (Nucleo de Entidades y Reglas Puras)"]
-            Entities["Entidades POCO Ricas (Usuario, Equipo, Prestamo, MovimientoInventario)"]
+            Entities["Entidades Ricas (Usuario, Equipo, Prestamo, MovimientoInventario) + ReglaNegocioException"]
             Services --> Entities
         end
 
-        subgraph CapaInfra["TechAsset.Infrastructure (Persistencia y Seguridad)"]
-            DbContext["TechAssetDbContext (Entity Framework Core 8) + Repositorios + JwtTokenGenerator"]
+        subgraph CapaInfra["TechAsset.Infrastructure (Persistencia, Servicios y Seguridad)"]
+            DbContext["TechAssetDbContext (EF Core 8) + DatabaseSeeder + Servicios + JwtTokenGenerator"]
             Services --> DbContext
         end
     end
 
     subgraph BaseDatos["Capa de Datos Relacional"]
-        Postgres[("PostgreSQL 16 (techasset_db) / SQLite Fallback con Restricciones CHECK, UNIQUE y FK")]
+        Postgres[("PostgreSQL 16+ (techasset_db) con Restricciones CHECK, UNIQUE, FK e Indice Parcial")]
     end
 
     ApiClient -- "JSON sobre HTTP/REST (Puerto 5080)" --> Middleware

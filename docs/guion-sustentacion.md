@@ -12,7 +12,7 @@
 2. Iniciar Backend: `dotnet run --project backend/TechAsset.API` (`http://localhost:5080`).
 3. Iniciar Frontend: `npm run dev` en `frontend/` (`http://localhost:5173`).
 4. Tener abiertas dos pestañas en el navegador:
-   - Pestaña 1: **TechAsset Web (`http://localhost:5173`)** en la pantalla de Login.
+   - Pestaña 1: **TechAsset Web (`http://localhost:5173`)** en la Landing Page pública (con botón **Iniciar sesión** hacia el Login).
    - Pestaña 2: **Swagger UI (`http://localhost:5080/swagger`)** para mostrar la documentación REST.
 
 ---
@@ -22,7 +22,7 @@
 ### 1. Introducción y Contexto del Problema (0:00 – 0:45)
 - **Discurso:**
   *"Buenos días. Presento **TechAsset**, el Sistema de Gestión de Inventario y Préstamo de Equipos Tecnológicos diseñado para **Innovatech Solutions S.A.C.**, una empresa con más de 500 colaboradores. Antes de TechAsset, el control de laptops, monitores, proyectores y equipos de red se llevaba en hojas de cálculo manuales, provocando pérdida de información, duplicidad de códigos, desconocimiento de ubicación y lentitud en préstamos y devoluciones."*
-- **En pantalla:** Mostrar la pantalla de Login (`http://localhost:5173`), destacando el acceso JWT y los 3 roles institucionales definidos en el caso práctico: **Administrador**, **Responsable de Tecnología** y **Colaborador**.
+- **En pantalla:** Mostrar primero la **Landing Page** (`http://localhost:5173`) y pulsar **Iniciar sesión** para pasar al Login, destacando el acceso JWT y los 3 roles institucionales definidos en el caso práctico: **Administrador**, **Responsable de Tecnología** y **Colaborador**.
 
 ---
 
@@ -36,9 +36,9 @@
 ### 3. Demostración en Vivo de los 7 Escenarios Mínimos (1:15 – 5:15)
 
 #### Escenario 1: Registrar usuario (`RF-01`, `RN-08`, `RN-09`) — *(1:15 – 1:50)*
-- **Acción:** Iniciar sesión como **Administrador** (`cmendoza@innovatech.pe` / `Admin2026!`) mediante el acceso rápido o formulario. Ir a **Usuarios y Accesos** → **Registrar usuario**.
+- **Acción:** Iniciar sesión como **Administrador** (`cmendoza@innovatech.pe` / `Admin2026!`) mediante el formulario de inicio de sesión. Ir a **Usuarios y Accesos** → **Registrar usuario**.
 - **Datos demo:** Nombres: *Sofía*, Apellidos: *Huamán Pérez*, Correo: *shuaman@innovatech.pe*, Área: *Desarrollo de Software*, Rol: *Colaborador*.
-- **Regla a destacar:** Si ingresamos un correo existente (`atorres@innovatech.pe`), el backend responde `409 Conflict` con `RN-08`. Al cambiar de actor demo a *Responsable de Tecnología*, mostrar que el botón de deshabilitar usuario está restringido por `RN-09` (`403 Forbidden` en API). Volver a *Administrador*.
+- **Regla a destacar:** Si ingresamos un correo existente (`atorres@innovatech.pe`), el backend responde `409 Conflict` con `RN-08`. Al cerrar sesión e ingresar como *Responsable de Tecnología* (`lquispe@innovatech.pe` / `Soporte2026!`), mostrar que el botón de deshabilitar usuario está restringido por `RN-09` (`403 Forbidden` en API). Volver a ingresar como *Administrador*.
 
 #### Escenario 2: Registrar equipo (`RF-05`, `RN-07`) — *(1:50 – 2:25)*
 - **Acción:** Ir a **Inventario de Equipos** → **Registrar equipo**.
@@ -50,7 +50,7 @@
 - **Regla a destacar antes de guardar:**
   1. Activar *"Mostrar también equipos no disponibles"* y seleccionar un equipo en `Mantenimiento` para mostrar la alerta `RN-02` (y rechazo `422` en backend).
   2. Seleccionar una fecha de devolución anterior a la de préstamo para mostrar la validación instantánea de `RN-04`.
-- **Registro válido:** Seleccionar el equipo `INV-LAP-2026`, colaborador *Andrés Torres*, responsable *Lucía Quispe* (`RN-05`), fecha préstamo hoy y devolución +7 días, observación *"Asignación para sprint de desarrollo"*. Confirmar. El equipo pasa automáticamente a estado **Prestado** (`RN-01`).
+- **Registro válido:** Seleccionar el equipo `INV-LAP-2026`, colaborador *Alejandro Torres Mejía*, responsable *Lucía Quispe* (`RN-05`), fecha préstamo hoy y devolución +7 días, observación *"Asignación para sprint de desarrollo"*. Confirmar. El equipo pasa automáticamente a estado **Prestado** (`RN-01`). (Si la solicitud la envía un **Colaborador**, se registra en estado **Pendiente** manteniendo el equipo **Disponible** hasta su aprobación en `PATCH /api/prestamos/{id}/aprobar`.)
 
 #### Escenario 4: Registrar devolución (`RF-10`, `RN-10`) — *(3:10 – 3:50)*
 - **Acción:** En la pestaña **Préstamos activos (`RF-12`)**, pulsar **Devolver** sobre el préstamo recién creado.

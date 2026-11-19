@@ -8,65 +8,65 @@
 
 ## 1. Catálogo de Componentes Reutilizables y Hooks en el Frontend
 
-Para evitar la duplicación de código visual y de comportamiento entre los módulos de **Usuarios**, **Equipos**, **Préstamos**, **Dashboard** y **Reportes**, se diseñó una biblioteca interna de **13 componentes UI desacoplados** y **2 custom hooks** ubicados en `frontend/src/components/ui/` y `frontend/src/hooks/`:
+Para evitar la duplicación de código visual y de comportamiento entre los módulos de **Usuarios**, **Equipos**, **Préstamos**, **Dashboard** y **Reportes**, se diseñó una biblioteca interna de **13 componentes UI desacoplados** y **4 custom hooks** (`useApi`, `useCarga`, `useDebounce`, `useForm`) ubicados en `frontend/src/components/ui/` y `frontend/src/hooks/`:
 
 ### 1.1 Los 13 Componentes de Interfaz Reutilizables
 
 | # | Componente | Archivo | Responsabilidad y Parametrización (`Props`) | Dónde se Reutiliza |
 | :-: | :--- | :--- | :--- | :--- |
-| 1 | **`Button`** | `ui/Button.tsx` | Botón accesible con variantes semánticas (`primary`, `secondary`, `danger`, `ghost`, `outline`), tamaños (`sm`, `md`, `lg`), estado `isLoading` e ícono izquierdo/derecho. | Todas las páginas y modales del sistema (más de 35 instancias). |
-| 2 | **`FormField`** | `ui/FormField.tsx` | Contenedor declarativo de campo de formulario con etiqueta `<label>`, indicador de obligatoriedad `*`, texto de ayuda y mensaje de error vinculado por `aria-describedby`. | Formularios de Login, Alta/Edición de Usuario, Alta/Edición de Equipo, Nuevo Préstamo y Devolución. |
-| 3 | **`SelectField`** | `ui/SelectField.tsx` | Selector desplegable tipado con soporte para opción vacía controlada, estado de error y deshabilitación. | Selección de Rol (`RN-09`), Área, Categoría de Equipo, Estado Operativo y Colaborador/Equipo en préstamos. |
-| 4 | **`SearchFilterBar`** | `ui/SearchFilterBar.tsx` | Barra unificada de búsqueda instantánea con ícono de lupa, botón de limpieza rápida y ranura (`children`) para filtros adicionales por categoría, marca o estado. | `UsuariosPage`, `EquiposPage` (`RF-08`), `PrestamosPage` (`RF-11`, `RF-12`) y `ReportesPage`. |
-| 5 | **`DataTable<T>`** | `ui/DataTable.tsx` | Tabla genérica fuertemente tipada en TypeScript (`ColumnDef<T>[]`) con ordenamiento por columna, paginación integrada, estado de carga y renderizado de celdas personalizadas. | Tablas de Usuarios, Inventario de Equipos, Préstamos Activos/Históricos y los 4 Reportes Gerenciales. |
-| 6 | **`StatusBadge`** | `ui/StatusBadge.tsx` | Etiqueta semántica con código de color e indicador de punto para estados de equipo (`Disponible`, `Prestado`, `Mantenimiento`, `Baja`), préstamo (`Activo`, `Devuelto`) y usuario (`Activo`, `Inactivo`). | Inventario, Préstamos, Usuarios, Dashboard y Bitácora de Movimientos. |
-| 7 | **`StatCard`** | `ui/StatCard.tsx` | Tarjeta ejecutiva de indicador clave (KPI) con título, valor numérico destacado, subtítulo porcentual, ícono y paleta cromática configurable. | `DashboardPage` (`RF-13`) y cabeceras de resumen en `EquiposPage`, `PrestamosPage` y `ReportesPage`. |
-| 8 | **`Modal`** | `ui/Modal.tsx` | Ventana modal accesible (`role="dialog"`, `aria-modal="true"`) con cierre por tecla `Escape`, bloqueo de scroll de fondo y pie de acciones parametrizable. | Creación/edición de usuarios, alta/edición/cambio de estado de equipos, registro de préstamos y devoluciones. |
-| 9 | **`ConfirmDialog`** | `ui/ConfirmDialog.tsx` | Diálogo de confirmación preventiva para acciones críticas o irreversibles (deshabilitar usuario `RF-03`, dar de baja o eliminar equipo `RN-06`). | `UsuariosPage` y `EquiposPage`. |
-| 10 | **`AlertBanner`** | `ui/AlertBanner.tsx` | Banner contextual (`error`, `warning`, `success`, `info`) que presenta de forma destacada el código y detalle de cualquier regla de negocio infringida (`RN-01` a `RN-10`). | Todos los formularios transaccionales y vistas de listado. |
-| 11 | **`EmptyState`** | `ui/EmptyState.tsx` | Vista informativa cuando una consulta o filtro no arroja resultados, ofreciendo un botón de acción directa para limpiar filtros o crear el primer registro. | Integrado en `DataTable<T>` y secciones de Dashboard. |
-| 12 | **`LoadingSpinner`** | `ui/LoadingSpinner.tsx` | Indicador visual de progreso asíncrono con etiqueta accesible para lectores de pantalla. | `ProtectedRoute`, `DataTable` y botones en estado de envío. |
-| 13 | **`PageHeader`** | `ui/PageHeader.tsx` | Encabezado estandarizado de página con migas de contexto, título principal, descripción operativa y barra de botones de acción primaria/exportación. | Las 5 páginas interiores del sistema. |
+| 1 | **`Button`** | `ui/Button.tsx` | Botón accesible con variantes semánticas (`primary`, `secondary`, `danger`, `ghost`), tamaños, estado de carga e ícono izquierdo/derecho. | Todas las páginas y modales del sistema. |
+| 2 | **`FormField`** | `ui/FormField.tsx` | Contenedor declarativo de campo de formulario con etiqueta `<label>`, indicador de obligatoriedad `*`, texto de ayuda y mensaje de error. | Formularios de Login, Usuario, Equipo, Préstamo y Devolución. |
+| 3 | **`Select`** | `ui/Select.tsx` | Selector desplegable tipado con soporte para opción vacía controlada, estado de error y deshabilitación. | Selección de Rol (`RN-09`), Área, Categoría, Estado Operativo y Colaborador/Equipo. |
+| 4 | **`Input`** | `ui/Input.tsx` | Campo de entrada tipado usado en filtros de búsqueda y captura de datos en formularios. | `UsuariosPage`, `EquiposPage` (`RF-08`), `PrestamosPage` y `ReportesPage`. |
+| 5 | **`DataTable<T>`** | `ui/DataTable.tsx` | Tabla genérica fuertemente tipada en TypeScript con renderizado declarativo de columnas, estado vacío y carga. | Tablas de Usuarios, Inventario de Equipos, Préstamos y Reportes Gerenciales. |
+| 6 | **`Badge`** | `ui/Badge.tsx` | Etiqueta semántica con código de color para estados de equipo (`Disponible`, `Prestado`, `Mantenimiento`, `Baja`), préstamo (`Pendiente`, `Activo`, `Devuelto`) y usuario (`Activo`, `Inactivo`). | Inventario, Préstamos, Usuarios, Dashboard y Bitácora de Movimientos. |
+| 7 | **`Card`** | `ui/Card.tsx` | Tarjeta ejecutiva contenedora para indicadores clave (KPIs) y bloques de métricas y gráficos. | `DashboardPage` (`RF-13`) y cabeceras de resumen en módulos y reportes. |
+| 8 | **`Modal`** | `ui/Modal.tsx` | Ventana modal accesible (`role="dialog"`, `aria-modal="true"`) con cierre por tecla `Escape` y pie de acciones parametrizable. | Creación/edición de usuarios, equipos, solicitud/registro de préstamos y devoluciones. |
+| 9 | **`ConfirmDialog`** | `ui/ConfirmDialog.tsx` | Diálogo de confirmación preventiva para acciones críticas (deshabilitar usuario `RF-03`, baja lógica `RN-06` o aprobación de préstamo). | `UsuariosPage`, `EquiposPage` y `PrestamosPage`. |
+| 10 | **`Toast`** | `ui/Toast.tsx` | Notificación contextual (`error`, `warning`, `success`, `info`) que presenta retroalimentación inmediata y el detalle de reglas (`RN-01` a `RN-10`). | Todos los formularios transaccionales y vistas de listado. |
+| 11 | **`EmptyState`** | `ui/EmptyState.tsx` | Vista informativa cuando una consulta o filtro no arroja resultados. | Integrado en `DataTable<T>` y secciones sin datos. |
+| 12 | **`Spinner`** | `ui/Spinner.tsx` | Indicador visual de progreso asíncrono accesible durante cargas de API. | `AppLayout`, `DataTable` y vistas con carga inicial. |
+| 13 | **`DatePicker`** | `ui/DatePicker.tsx` | Selector de fechas controlado con soporte para límites mínimo/máximo (`RN-04`). | Formularios y filtros de rango en `PrestamosPage` y `ReportesPage`. |
 
 ### 1.2 Custom Hooks Reutilizables
-- **`useApi<T>` (`src/hooks/useApi.ts`):** Encapsula el ciclo de vida completo de peticiones HTTP asíncronas (`data`, `loading`, `error`, `execute`, `reset`), extrayendo automáticamente el mensaje estructurado de error enviado por el backend cuando se activa una regla de negocio (`RN-01`..`RN-10`).
-- **`useFormValidation<T>` (`src/hooks/useFormValidation.ts`):** Integra esquemas declarativos de validación (`Zod`) con el estado del formulario, permitiendo validar reglas como `RN-04` (`fechaDevolucion > fechaPrestamo`), formato de correo (`RN-08`) y código patrimonial (`RN-07`) antes de invocar la red.
+- **`useApi<T>` (`src/hooks/useApi.ts`):** Encapsula el ciclo de vida completo de peticiones HTTP asíncronas (`data`, `cargando`, `error`, `ejecutar`), extrayendo el mensaje estructurado enviado por el backend cuando se activa una regla de negocio (`RN-01`..`RN-10`).
+- **`useCarga`, `useDebounce` y `useForm` (`src/hooks/`):** Gestionan la carga inicial, búsqueda diferida y formularios con **React Hook Form + Zod** (`src/utils/esquemas.ts`, validando `RN-04`, `RN-05`, `RN-07`, `RN-08` y `RN-10` con `mode: 'onTouched'`).
 
 ---
 
 ## 2. Aplicación de Programación Orientada a Objetos (POO) y Principios SOLID
 
 ### 2.1 Pilares de POO Aplicados en TechAsset
-1. **Encapsulamiento y Modelo de Dominio Rico:** Las entidades `Equipo`, `Prestamo` y `Usuario` no son simples contenedores pasivos de datos; incluyen métodos de comportamiento de dominio (`Equipo.PuedeSerPrestado()`, `Equipo.RegistrarSalidaPrestamo()`, `Prestamo.CerrarDevolucion()`, `Usuario.EstaHabilitadoParaPrestamo()`) que protegen las invariantes de negocio.
-2. **Abstracción:** La capa de Aplicación define contratos claros (`IUsuarioService`, `IEquipoService`, `IPrestamoService`, `IReporteService`) desacoplando qué hace el negocio de cómo se persiste en PostgreSQL/EF Core.
-3. **Polimorfismo e Inyección de Dependencias:** Los servicios consumen abstracciones inyectadas en el contenedor IoC de ASP.NET Core 8, lo que permite sustituir la infraestructura real por bases de datos en memoria durante la ejecución de las pruebas unitarias en `TechAsset.Tests`.
+1. **Encapsulamiento y Modelo de Dominio Rico:** Las entidades `Equipo`, `Prestamo` y `Usuario` no son simples contenedores pasivos de datos; incluyen métodos de comportamiento de dominio (`Equipo.ValidarDisponibleParaPrestamo()`, `Equipo.MarcarComoPrestado()`, `Equipo.DarDeBajaLogica()`, `Prestamo.Crear()`, `Prestamo.CrearSolicitud()`, `Prestamo.Aprobar()`, `Prestamo.RegistrarDevolucion()`, `Usuario.CambiarEstado()`) que protegen las invariantes de negocio.
+2. **Abstracción y Centralización de Catálogos:** La capa de Aplicación define contratos claros (`IAuthService`, `IUsuarioService`, `IEquipoService`, `IPrestamoService`, `IReporteService`) y `CatalogosDominio.cs` centraliza roles, estados, categorías, áreas (`Areas.InfraestructuraSoporte`), credenciales por defecto y mensajes `RN-xx` sin literales repetidos.
+3. **Polimorfismo e Inyección de Dependencias:** Los servicios consumen abstracciones inyectadas en el contenedor IoC de ASP.NET Core 8, lo que permite sustituir PostgreSQL por bases de datos en memoria durante las 39 pruebas unitarias en `TechAsset.Tests`.
 
 ### 2.2 Los 5 Principios SOLID en la Arquitectura del Proyecto
 
 | Principio SOLID | Implementación Concreta en TechAsset | Beneficio Obtenido |
 | :--- | :--- | :--- |
-| **S — Single Responsibility Principle (Responsabilidad Única)** | `PrestamosController` solo gestiona el transporte HTTP; `PrestamoService` coordina el caso de uso de préstamo/devolución; `JwtTokenGenerator` solo firma tokens JWT; `ExceptionHandlingMiddleware` centraliza el formateo de errores HTTP. | Facilita localizar y modificar reglas de negocio sin afectar el transporte HTTP ni la seguridad. |
-| **O — Open/Closed Principle (Abierto/Cerrado)** | El componente `DataTable<T>` y el patrón `Result<T>` están abiertos a la extensión (nuevas entidades, nuevas columnas con `render` personalizado o nuevos tipos de reporte) pero cerrados a la modificación de su motor interno. | Se agregaron los 4 reportes (`RF-14` a `RF-17`) reutilizando `DataTable<T>` sin tocar una sola línea de su implementación. |
-| **L — Liskov Substitution Principle (Sustitución de Liskov)** | Las implementaciones de servicios e infraestructura cumplen estrictamente las precondiciones y postcondiciones de sus interfaces (`IEquipoService`, `IPrestamoService`), devolviendo siempre objetos `Result<T>` consistentes sin lanzar excepciones inesperadas para flujos de negocio controlados. | Comportamiento predecible tanto en producción como en las pruebas automatizadas con `xUnit`. |
-| **I — Interface Segregation Principle (Segregación de Interfaces)** | En lugar de un único servicio monolítico `IInventarioGeneralService`, los contratos están segregados por cohesión funcional: `IAuthService`, `IUsuarioService`, `IEquipoService`, `IPrestamoService` e `IReporteService`. | Cada controlador o consumidor depende exclusivamente de los métodos que realmente utiliza. |
-| **D — Dependency Inversion Principle (Inversión de Dependencias)** | Los controladores de `TechAsset.API` y casos de uso dependen de las interfaces definidas en `TechAsset.Application.Interfaces`, nunca de implementaciones concretas de infraestructura. | Permite probar todas las reglas `RN-01` a `RN-10` en menos de 2 segundos mediante pruebas unitarias aisladas. |
+| **S — Single Responsibility Principle (Responsabilidad Única)** | Cada controlador reside en su propio archivo (6 controladores delgados); `PrestamoService` delega validaciones y creación en métodos privados (`< 40` líneas) y entidades; `DatabaseSeeder` separa usuarios, equipos, préstamos y movimientos; `ManejoErroresMiddleware` centraliza errores HTTP. | Facilita localizar y modificar reglas de negocio sin afectar el transporte HTTP ni la seguridad. |
+| **O — Open/Closed Principle (Abierto/Cerrado)** | El componente `DataTable<T>` y las políticas/validadores FluentValidation están abiertos a extensión (nuevas columnas con `render` personalizado o nuevos validadores) sin alterar el motor base. | Se agregaron los 4 reportes (`RF-14` a `RF-17`) y el flujo `Pendiente`/aprobación reutilizando la arquitectura base. |
+| **L — Liskov Substitution Principle (Sustitución de Liskov)** | Las implementaciones de servicios cumplen estrictamente las precondiciones y postcondiciones de sus interfaces (`IEquipoService`, `IPrestamoService`), respondiendo contratos `ErrorRespuestaDto` uniformes ante `ReglaNegocioException`. | Comportamiento predecible tanto contra PostgreSQL en producción como en las pruebas unitarias con `xUnit`. |
+| **I — Interface Segregation Principle (Segregación de Interfaces)** | En lugar de un único servicio monolítico, los contratos están segregados por cohesión funcional: `IAuthService` (sin el código muerto `/api/auth/demo-users`), `IUsuarioService`, `IEquipoService`, `IPrestamoService` e `IReporteService`. | Cada controlador o consumidor depende exclusivamente de los métodos que realmente utiliza. |
+| **D — Dependency Inversion Principle (Inversión de Dependencias)** | Los controladores de `TechAsset.API` y validadores dependen de las interfaces y DTOs definidos en `TechAsset.Application.Interfaces`, nunca de clases concretas de infraestructura. | Permite probar todas las reglas `RN-01` a `RN-10` en segundos mediante 39 pruebas unitarias aisladas. |
 
 ---
 
 ## 3. Cinco Casos Reales de Refactorización (Antes vs. Después)
 
-A continuación se documentan **5 refactorizaciones estructurales** ejecutadas durante la **Actividad 3** para eliminar *code smells* (controladores obesos, consultas duplicadas, modelo anémico, formularios repetitivos y tablas acopladas).
+A continuación se documentan **5 refactorizaciones estructurales** ejecutadas durante la **Actividad 3** para eliminar *code smells* (controladores obesos y archivo monolítico, validaciones duplicadas y métodos largos, modelo anémico, formularios repetitivos y tablas acopladas) además de retirar código muerto (`/api/auth/demo-users`) y literales repetidos.
 
 ---
 
-### Refactorización 1: Extracción de Reglas de Negocio (`RN-01`..`RN-05`, `RN-10`) desde el Controlador hacia el Servicio con Patrón `Result<T>`
+### Refactorización 1: Extracción de Reglas (`RN-01`..`RN-05`, `RN-10`) desde el Controlador hacia `Validadores`, `PrestamoService` y Entidades de Dominio
 
-- **Problema detectado (*Code Smell: Fat Controller & Spaghetti Validation*):** Inicialmente el controlador `PrestamosController` consultaba directamente el `DbContext`, encadenaba condicionales `if` anidados para validar `RN-01` a `RN-05` y `RN-10`, y no garantizaba atomicidad entre el cambio de estado del equipo y la inserción de la bitácora.
-- **Técnica aplicada:** *Extract Service + Result Pattern + Rich Domain Validation*.
+- **Problema detectado (*Code Smell: Fat Controller, Métodos Largos & Validaciones Duplicadas*):** Inicialmente los controladores se concentraban en un solo archivo `Controllers.cs`, acoplaban lógica repetida y métodos largos (`RegistrarPrestamoAsync`, `AprobarPrestamoAsync`, `ValidarCamposEquipo`, `ValidarCamposBasicos`) duplicando reglas entre validadores, servicios y entidades.
+- **Técnica aplicada:** *Extract Controller Files + Extract Method (< 40 líneas) + FluentValidation + Rich Domain Validation*.
 
 #### Antes de la Refactorización
 ```csharp
-// ANTES: Controlador acoplado a EF Core con validaciones dispersas y sin bitácora atómica
+// ANTES: Controlador en archivo único con validaciones dispersas y códigos HTTP inconsistentes
 [HttpPost]
 public async Task<IActionResult> CrearPrestamo([FromBody] CrearPrestamoDto dto)
 {
@@ -77,7 +77,7 @@ public async Task<IActionResult> CrearPrestamo([FromBody] CrearPrestamoDto dto)
     if (equipo.Estado == "Baja") return Conflict("Dado de baja"); // RN-03
 
     var usuario = await _db.Usuarios.FindAsync(dto.UsuarioId);
-    if (usuario == null || !usuario.Estado) return UnprocessableEntity("Usuario inactivo"); // RN-10
+    if (usuario == null || !usuario.Estado) return UnprocessableEntity("Usuario inactivo");
 
     if (dto.FechaDevolucion <= dto.FechaPrestamo) return BadRequest("Fechas inválidas"); // RN-04
 
@@ -90,54 +90,38 @@ public async Task<IActionResult> CrearPrestamo([FromBody] CrearPrestamoDto dto)
 
 #### Después de la Refactorización
 ```csharp
-// DESPUÉS: Thin Controller limpio + Servicio transaccional con Result<PrestamoDto>
+// DESPUÉS: PrestamosController.cs (archivo propio) delgado + FluentValidation + ManejoErroresMiddleware
 [HttpPost]
-[Authorize(Roles = "Administrador,Responsable de Tecnología")] // RN-09
-public async Task<IActionResult> RegistrarPrestamo([FromBody] CrearPrestamoDto dto)
+public async Task<ActionResult<PrestamoDto>> Registrar([FromBody] CrearPrestamoDto dto, CancellationToken ct)
 {
-    var resultado = await _prestamoService.RegistrarPrestamoAsync(dto);
-    if (!resultado.IsSuccess)
-        return StatusCode(resultado.StatusCode, new { error = resultado.Error, codigoRegla = resultado.RuleCode });
-
-    return CreatedAtAction(nameof(ObtenerPorId), new { id = resultado.Value!.Id }, resultado.Value);
+    if (EsColaborador && ActorId.HasValue)
+    {
+        dto.UsuarioId = ActorId.Value;
+        dto.ResponsableId = null;
+    }
+    await ValidarAsync(_crearValidator, dto, ct);
+    var creado = await _prestamos.RegistrarPrestamoAsync(dto, ActorRol, ct);
+    return CreatedAtAction(nameof(Listar), new { id = creado.Id }, creado);
 }
 ```
 
 ```csharp
-// En PrestamoService.cs: Validación sistemática de RN-01 a RN-05 y RN-10 + Bitácora RF-17
-public async Task<Result<PrestamoDto>> RegistrarPrestamoAsync(CrearPrestamoDto dto)
+// En PrestamoService.cs: orquestación en métodos privados (< 40 líneas) sin duplicar RN-04 ni formato
+public async Task<PrestamoDto> RegistrarPrestamoAsync(
+    CrearPrestamoDto dto, string? rolActor = null, CancellationToken ct = default)
 {
-    if (dto.FechaDevolucion <= dto.FechaPrestamo)
-        return Result<PrestamoDto>.Failure(
-            "RN-04: La fecha estimada de devolución debe ser estrictamente posterior a la fecha de préstamo.",
-            statusCode: 400, ruleCode: "RN-04");
+    var esSolicitudColaborador = string.Equals(rolActor, Roles.Colaborador, StringComparison.OrdinalIgnoreCase);
 
-    if (dto.ResponsableId == Guid.Empty)
-        return Result<PrestamoDto>.Failure(
-            "RN-05: Todo préstamo debe tener un usuario responsable asignado.",
-            statusCode: 400, ruleCode: "RN-05");
+    Usuario? responsable = esSolicitudColaborador
+        ? null
+        : await ObtenerResponsableDelPrestamoAsync(dto.ResponsableId, ct);
 
-    var equipo = await _context.Equipos.FirstOrDefaultAsync(e => e.Id == dto.EquipoId);
-    if (equipo is null)
-        return Result<PrestamoDto>.Failure("El equipo solicitado no existe.", 404, "EQ-404");
+    var usuario = await ObtenerUsuarioReceptorAsync(dto.UsuarioId, ct);   // Valida existencia y USR-INACTIVO (422)
+    var equipo = await ObtenerEquipoPrestableAsync(dto.EquipoId, ct);     // Invoca equipo.ValidarDisponibleParaPrestamo() y RN-01
 
-    var validacionEquipo = equipo.ValidarDisponibilidadParaPrestamo(); // Verifica RN-01, RN-02, RN-03
-    if (!validacionEquipo.IsSuccess)
-        return Result<PrestamoDto>.Failure(validacionEquipo.Error!, validacionEquipo.StatusCode, validacionEquipo.RuleCode);
-
-    var tienePrestamoActivo = await _context.Prestamos
-        .AnyAsync(p => p.EquipoId == dto.EquipoId && p.EstadoPrestamo == "Activo");
-    if (tienePrestamoActivo)
-        return Result<PrestamoDto>.Failure(
-            "RN-01: El equipo seleccionado ya cuenta con un préstamo activo.", 409, "RN-01");
-
-    var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == dto.UsuarioId);
-    if (usuario is null || !usuario.Estado)
-        return Result<PrestamoDto>.Failure(
-            "RN-10: Un usuario inactivo no puede recibir préstamos de equipos.", 422, "RN-10");
-
-    equipo.MarcarComoPrestado();
-    // Persistencia conjunta de Préstamo + MovimientoInventario ("Prestamo") en un único SaveChangesAsync()
+    return esSolicitudColaborador
+        ? await CrearSolicitudPendienteAsync(dto, usuario, equipo, ct)    // Estado Pendiente; Prestamo.CrearSolicitud valida RN-04
+        : await CrearPrestamoActivoAsync(dto, usuario, equipo, responsable!, ct); // Estado Activo + MovimientoInventario
 }
 ```
 
@@ -145,7 +129,7 @@ public async Task<Result<PrestamoDto>> RegistrarPrestamoAsync(CrearPrestamoDto d
 
 ### Refactorización 2: Encapsulamiento Rico en la Entidad `Equipo` para Transiciones de Estado y Protección de Historial (`RN-06`)
 
-- **Problema detectado (*Code Smell: Anemic Domain Model*):** Las transiciones de estado del equipo (`Disponible`, `Prestado`, `Mantenimiento`, `Baja`) se realizaban asignando cadenas sueltas desde distintos lugares, permitiendo que un equipo actualmente `Prestado` fuera pasado manualmente a `Baja` sin cerrar su préstamo o que se eliminara físicamente perdiendo trazabilidad (`RN-06`).
+- **Problema detectado (*Code Smell: Anemic Domain Model*):** Las transiciones de estado del equipo (`Disponible`, `Prestado`, `Mantenimiento`, `Baja`) se realizaban asignando cadenas sueltas desde el servicio, duplicando en `EquipoService.EliminarOBajaLogicaAsync` las comprobaciones de `RN-01` y `RN-06`.
 - **Técnica aplicada:** *Encapsulate State Transition & Domain Invariants*.
 
 #### Antes de la Refactorización
@@ -157,31 +141,31 @@ await _context.SaveChangesAsync();
 
 #### Después de la Refactorización
 ```csharp
-// DESPUÉS: Método de dominio encapsulado en Equipo.cs + verificación RN-06 en EquipoService.cs
-public Result ValidarDisponibilidadParaPrestamo()
+// DESPUÉS: Validación y baja lógica encapsuladas en Equipo.cs con ReglaNegocioException
+public void ValidarDisponibleParaPrestamo()
 {
-    return Estado switch
-    {
-        "Prestado" => Result.Failure(
-            "RN-01: El equipo no puede prestarse porque ya se encuentra prestado.", 409, "RN-01"),
-        "Mantenimiento" => Result.Failure(
-            "RN-02: Un equipo en estado de mantenimiento no puede ser prestado.", 409, "RN-02"),
-        "Baja" => Result.Failure(
-            "RN-03: Un equipo dado de baja no puede ser asignado a ningún préstamo.", 409, "RN-03"),
-        "Disponible" => Result.Success(),
-        _ => Result.Failure("Estado de equipo no válido para préstamo.", 400, "RN-ESTADO")
-    };
+    if (string.Equals(Estado, EstadosEquipo.Mantenimiento, StringComparison.OrdinalIgnoreCase))
+        throw new ReglaNegocioException("RN-02", "RN-02: No se puede prestar un equipo en estado 'Mantenimiento'.", 422);
+
+    if (string.Equals(Estado, EstadosEquipo.Baja, StringComparison.OrdinalIgnoreCase))
+        throw new ReglaNegocioException("RN-03", "RN-03: No se puede prestar un equipo en estado 'Baja'.", 422);
+
+    if (string.Equals(Estado, EstadosEquipo.Prestado, StringComparison.OrdinalIgnoreCase))
+        throw new ReglaNegocioException("RN-01", MensajesRegla.Rn01EquipoConPrestamoActivo, 409);
 }
 
-// Protección estricta RN-06 ante intento de borrado físico:
-public async Task<Result> EliminarEquipoAsync(Guid id)
+// Protección estricta RN-01 y RN-06 centralizada en Equipo.DarDeBajaLogica():
+public void DarDeBajaLogica(bool aplicarBajaLogica)
 {
-    var tieneHistorial = await _context.Prestamos.AnyAsync(p => p.EquipoId == id);
-    if (tieneHistorial)
-        return Result.Failure(
-            "RN-06: No se puede eliminar un equipo que tenga historial de préstamos. Utilice el cambio de estado a 'Baja'.",
-            statusCode: 409, ruleCode: "RN-06");
-    // Solo permite eliminar si fue registrado por error y jamás tuvo préstamos
+    var tienePrestamoActivo = Prestamos.Any(p => p.EstadoPrestamo == EstadosPrestamo.Activo) ||
+                              string.Equals(Estado, EstadosEquipo.Prestado, StringComparison.OrdinalIgnoreCase);
+    if (tienePrestamoActivo)
+        throw new ReglaNegocioException("RN-01", "RN-01: No se puede eliminar ni dar de baja un equipo que tiene un préstamo activo.", 409);
+
+    if (Prestamos.Count > 0 && !aplicarBajaLogica)
+        throw new ReglaNegocioException("RN-06", "RN-06: No se puede eliminar un equipo con historial de préstamos. Utilice la baja lógica cambiando su estado a 'Baja'.", 409);
+
+    Estado = EstadosEquipo.Baja;
 }
 ```
 
@@ -236,10 +220,10 @@ public async Task<IReadOnlyList<EquipoDto>> ListarEquiposAsync(FiltroEquipoDto f
 
 ---
 
-### Refactorización 4: Estandarización de Formularios en React con `FormField`, `SelectField` y Validación Declarativa (`RN-04`, `RN-07`, `RN-08`)
+### Refactorización 4: Estandarización de Formularios en React con `FormField`, `Select` y Validación Declarativa (`RN-04`, `RN-07`, `RN-08`)
 
 - **Problema detectado (*Code Smell: Repetitive Form Markup & Imperative Validation*):** Cada ventana modal repetía más de 25 líneas de etiquetas `<label>`, clases de borde condicionales y mensajes de error manuales por cada input.
-- **Técnica aplicada:** *Component Extraction (`FormField` / `SelectField`) + Schema Validation Hook*.
+- **Técnica aplicada:** *Component Extraction (`FormField` / `Select`) + Schema Validation (`useForm` + `Zod`)*.
 
 #### Antes de la Refactorización
 ```tsx
@@ -258,27 +242,28 @@ public async Task<IReadOnlyList<EquipoDto>> ListarEquiposAsync(FiltroEquipoDto f
 
 #### Después de la Refactorización
 ```tsx
-// DESPUÉS: Uso declarativo de FormField y SelectField con accesibilidad y validación integrada
+// DESPUÉS: FormField y Select con React Hook Form + Zod
 <FormField
-  id="codigoPatrimonial"
   label="Código Patrimonial (RN-07)"
   required
-  placeholder="Ej. INV-LAP-0007"
-  value={form.codigoPatrimonial}
-  onChange={(e) => updateField('codigoPatrimonial', e.target.value.toUpperCase())}
-  error={errors.codigoPatrimonial}
-  helperText="Identificador único institucional en formato INV-CAT-0000"
-/>
+  error={errors.codigoPatrimonial?.message}
+>
+  <Input
+    placeholder="Ej. INV-LAP-007"
+    {...register('codigoPatrimonial')}
+  />
+</FormField>
 
-<SelectField
-  id="categoria"
+<FormField
   label="Categoría Tecnológica"
   required
-  value={form.categoria}
-  onChange={(e) => updateField('categoria', e.target.value)}
-  options={CATEGORIAS_EQUIPO_OPTIONS}
-  error={errors.categoria}
-/>
+  error={errors.categoria?.message}
+>
+  <Select
+    options={CATEGORIAS_EQUIPO.map((c) => ({ valor: c, etiqueta: c }))}
+    {...register('categoria')}
+  />
+</FormField>
 ```
 
 ---
@@ -319,7 +304,7 @@ const columnasEquipos: ColumnDef<EquipoDto>[] = [
   {
     key: 'estado',
     header: 'Estado Operativo',
-    render: (equipo) => <StatusBadge status={equipo.estado} />,
+    render: (equipo) => <Badge ...>{equipo.estado}</Badge>,
   },
 ];
 
@@ -339,7 +324,7 @@ const columnasEquipos: ColumnDef<EquipoDto>[] = [
 
 | Métrica de Calidad de Software | Antes de Refactorizar | Después de Refactorizar | Mejora Lograda |
 | :--- | :---: | :---: | :---: |
-| **Líneas promedio por Controlador REST (.NET 8)** | ~145 líneas | ~48 líneas | **-66.9%** (Controladores delgados) |
+| **Líneas promedio por Controlador REST (.NET 8)** | ~145 líneas | ~45 líneas (6 archivos) | **-69.0%** (Controladores delgados) |
 | **Duplicación de marcado en Tablas y Formularios React** | ~520 líneas repetidas | 0 líneas (centralizado en `ui/`) | **100%** reutilizado en 13 componentes |
-| **Cobertura de las 10 Reglas de Negocio (`RN-01`..`RN-10`)** | Parcial y dispersa en UI/Controlador | 100% centralizada y probada en `xUnit` | **10/10 reglas verificadas automáticamente** |
-| **Consistencia de respuestas de error HTTP** | Textos planos heterogéneos | Contrato JSON uniforme `{ error, codigoRegla }` | **Trazabilidad directa en UI y Postman** |
+| **Cobertura de las 10 Reglas de Negocio (`RN-01`..`RN-10`)** | Parcial y dispersa en UI/Controlador | 100% centralizada y probada en `xUnit` | **39/39 pruebas xUnit y 52/52 peticiones Postman (81 aserciones)** |
+| **Consistencia de respuestas de error HTTP** | Textos planos heterogéneos | Contrato JSON uniforme `{ exito, codigo, mensaje, errores }` | **Trazabilidad directa en UI y Postman** |
