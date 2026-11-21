@@ -448,11 +448,20 @@ public class ReportesYAutenticacionTests : PruebaBase
         Assert.Equal(movs.OrderByDescending(m => m.Fecha).Select(m => m.Id), movs.Select(m => m.Id));
     }
 
+    private static IConfiguration CrearConfiguracionJwtPruebas() =>
+        new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Jwt:Key"] = "ClaveDePruebaUnitariaTechAssetSoloParaTests2026!",
+                ["Jwt:Issuer"] = "TechAsset.API",
+                ["Jwt:Audience"] = "TechAsset.Client"
+            })
+            .Build();
+
     [Fact(DisplayName = "Login: credenciales válidas devuelven JWT y rol")]
     public async Task Login_Valido()
     {
-        var config = new ConfigurationBuilder().AddInMemoryCollection().Build();
-        var auth = new AuthService(Db, new JwtTokenGenerator(config));
+        var auth = new AuthService(Db, new JwtTokenGenerator(CrearConfiguracionJwtPruebas()));
         var r = await auth.LoginAsync(new LoginRequestDto { Correo = "cmendoza@innovatech.pe", Password = "Admin2026!" });
         Assert.False(string.IsNullOrWhiteSpace(r.Token));
         Assert.Equal(Roles.Administrador, r.Usuario.Rol);
@@ -461,16 +470,14 @@ public class ReportesYAutenticacionTests : PruebaBase
     [Fact(DisplayName = "Login: contraseña incorrecta es rechazada")]
     public async Task Login_Invalido()
     {
-        var config = new ConfigurationBuilder().AddInMemoryCollection().Build();
-        var auth = new AuthService(Db, new JwtTokenGenerator(config));
+        var auth = new AuthService(Db, new JwtTokenGenerator(CrearConfiguracionJwtPruebas()));
         await Assert.ThrowsAsync<ReglaNegocioException>(() => auth.LoginAsync(new LoginRequestDto { Correo = "cmendoza@innovatech.pe", Password = "incorrecta" }));
     }
 
     [Fact(DisplayName = "Login: un usuario deshabilitado no ingresa (403)")]
     public async Task Login_UsuarioDeshabilitado()
     {
-        var config = new ConfigurationBuilder().AddInMemoryCollection().Build();
-        var auth = new AuthService(Db, new JwtTokenGenerator(config));
+        var auth = new AuthService(Db, new JwtTokenGenerator(CrearConfiguracionJwtPruebas()));
         var ex = await EsperarReglaAsync(() => auth.LoginAsync(new LoginRequestDto { Correo = "rvasquez@innovatech.pe", Password = "Colab2026!" }));
         Assert.Equal(403, ex.StatusCode);
     }

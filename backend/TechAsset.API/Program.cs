@@ -14,8 +14,14 @@ using TechAsset.Infrastructure.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 var configuration = builder.Configuration;
-var connectionString = configuration.GetConnectionString("DefaultConnection")
-    ?? "Host=localhost;Port=5432;Database=techasset_db;Username=postgres;Password=admin123";
+var connectionString = configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    throw new InvalidOperationException(
+        "Falta la cadena de conexión 'ConnectionStrings:DefaultConnection'. " +
+        "Configúrela mediante user-secrets en desarrollo (dotnet user-secrets set \"ConnectionStrings:DefaultConnection\" \"...\") " +
+        "o con la variable de entorno ConnectionStrings__DefaultConnection.");
+}
 
 builder.Services.AddDbContext<TechAssetDbContext>(options => options.UseNpgsql(connectionString));
 
@@ -29,7 +35,14 @@ builder.Services.AddScoped<IReporteService, ReporteService>();
 builder.Services.AddValidatorsFromAssemblyContaining<CrearUsuarioValidator>();
 
 // JWT
-var jwtKey = configuration["Jwt:Key"] ?? "InnovatechSolutionsTechAssetSuperSecretKey2026!@#";
+var jwtKey = configuration["Jwt:Key"];
+if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
+{
+    throw new InvalidOperationException(
+        "La clave 'Jwt:Key' es obligatoria y debe tener al menos 32 caracteres. " +
+        "Configúrela mediante user-secrets en desarrollo (dotnet user-secrets set \"Jwt:Key\" \"...\") " +
+        "o con la variable de entorno Jwt__Key.");
+}
 var jwtIssuer = configuration["Jwt:Issuer"] ?? "TechAsset.API";
 var jwtAudience = configuration["Jwt:Audience"] ?? "TechAsset.Client";
 

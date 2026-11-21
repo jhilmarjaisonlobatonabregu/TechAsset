@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using TechAsset.API.Controllers;
@@ -30,7 +31,7 @@ namespace TechAsset.Tests;
 /// </summary>
 public sealed class ApiAutorizacionFixture : IAsyncLifetime
 {
-    private const string JwtKey = "InnovatechSolutionsTechAssetSuperSecretKey2026!@#";
+    private const string JwtKey = "ClaveDePruebaIntegracionTechAssetSoloParaTests2026!";
     private const string JwtIssuer = "TechAsset.API";
     private const string JwtAudience = "TechAsset.Client";
 
@@ -46,6 +47,13 @@ public sealed class ApiAutorizacionFixture : IAsyncLifetime
         });
 
         builder.WebHost.UseUrls("http://127.0.0.1:0");
+
+        builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Jwt:Key"] = JwtKey,
+            ["Jwt:Issuer"] = JwtIssuer,
+            ["Jwt:Audience"] = JwtAudience
+        });
 
         builder.Services.AddDbContext<TechAssetDbContext>(options => options.UseInMemoryDatabase(dbName));
         builder.Services.AddSingleton<JwtTokenGenerator>();

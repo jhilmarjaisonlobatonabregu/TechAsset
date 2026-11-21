@@ -68,7 +68,12 @@ public class JwtTokenGenerator
 
     public string GenerarToken(Usuario usuario)
     {
-        var secretKey = _configuration["Jwt:Key"] ?? "InnovatechSolutionsTechAssetSuperSecretKey2026!@#";
+        var secretKey = _configuration["Jwt:Key"];
+        if (string.IsNullOrWhiteSpace(secretKey) || secretKey.Length < 32)
+        {
+            throw new InvalidOperationException(
+                "La clave 'Jwt:Key' no está configurada o tiene menos de 32 caracteres.");
+        }
         var issuer = _configuration["Jwt:Issuer"] ?? "TechAsset.API";
         var audience = _configuration["Jwt:Audience"] ?? "TechAsset.Client";
 
