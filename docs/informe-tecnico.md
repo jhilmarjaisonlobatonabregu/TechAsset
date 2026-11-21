@@ -34,7 +34,7 @@ La solución separa estrictamente las responsabilidades técnicas en cuatro proy
 - **`TechAsset.Application`:** Contratos de servicios (`IAuthService`, `IUsuarioService`, `IEquipoService`, `IPrestamoService`, `IReporteService`), DTOs fuertemente tipados y validadores `FluentValidation` (`Validadores.cs`).
 - **`TechAsset.Infrastructure`:** Persistencia transaccional con Entity Framework Core 8 (`TechAssetDbContext`), inicializador automático de datos semilla (`DatabaseSeeder`), servicios de aplicación/negocio y seguridad criptográfica (`PasswordHasher` y `JwtTokenGenerator`).
 - **`TechAsset.API`:** Seis controladores REST delgados en archivos individuales (`AuthController`, `UsuariosController`, `EquiposController`, `PrestamosController`, `DashboardController`, `ReportesController`), documentación interactiva OpenAPI/Swagger y `ManejoErroresMiddleware`.
-- **`frontend/` (React 19 + TypeScript + Tailwind CSS):** Landing page pública (`LandingPage`), arquitectura basada en 13 componentes UI reutilizables, custom hooks (`useApi`, `useCarga`, `useDebounce`, `useForm`) y cliente HTTP centralizado con inyección automática del token JWT.
+- **`frontend/` (React 19 + TypeScript + Tailwind CSS):** Landing page pública (`LandingPage`), arquitectura basada en 14 componentes UI reutilizables, custom hooks (`useApi`, `useCarga`, `useDebounce`, `useForm`) y cliente HTTP centralizado con inyección automática del token JWT.
 
 ### 3.2 Modelo Relacional de Base de Datos (`techasset_db`)
 El script oficial [init_techasset.sql](file:///C:/Users/lobat/Downloads/TechAsset/database/init_techasset.sql) implementa las cuatro tablas del dominio compatibles con EF Core (columnas `"PascalCase"` e integridad declarativa, con semilla de **9 usuarios, 24 equipos, 20 préstamos y 44 movimientos**):
@@ -81,7 +81,7 @@ En cumplimiento de la **Sección 12 del Caso Práctico Oficial**, se verificaron
 
 ## 6. Matriz de Pruebas de las 10 Reglas de Negocio (RN-01 a RN-10)
 
-Todas las reglas de negocio fueron sometidas a casos de prueba negativos (intentos deliberados de violar la regla) tanto mediante la colección Postman ([TechAsset.postman_collection.json](file:///C:/Users/lobat/Downloads/TechAsset/postman/TechAsset.postman_collection.json), **52 peticiones y 81 aserciones**) como en la suite de pruebas unitarias `xUnit` (**39 pruebas**):
+Todas las reglas de negocio fueron sometidas a casos de prueba negativos (intentos deliberados de violar la regla) tanto mediante la colección Postman ([TechAsset.postman_collection.json](file:///C:/Users/lobat/Downloads/TechAsset/postman/TechAsset.postman_collection.json), **72 peticiones y 105 aserciones**) como en la suite de pruebas unitarias `xUnit` (**68 pruebas**):
 
 | Código | Caso de Prueba Ejecutado | Datos de Entrada de Prueba | Respuesta Esperada | HTTP | Estado |
 | :---: | :--- | :--- | :--- | :---: | :---: |
@@ -100,7 +100,7 @@ Todas las reglas de negocio fueron sometidas a casos de prueba negativos (intent
 
 ## 7. Pruebas Unitarias Automatizadas en xUnit (`TechAsset.Tests`)
 
-El proyecto `tests/TechAsset.Tests` contiene **39 pruebas unitarias automatizadas** construidas con **xUnit** y **Entity Framework Core InMemory**, ejecutables mediante el comando `dotnet test backend/TechAsset.sln`. La suite verifica:
+El proyecto `tests/TechAsset.Tests` contiene **68 pruebas unitarias automatizadas** construidas con **xUnit** y **Entity Framework Core InMemory**, ejecutables mediante el comando `dotnet test backend/TechAsset.sln`. La suite verifica:
 1. Cumplimiento individual de cada una de las **10 reglas de negocio (`RN-01` a `RN-10`)**.
 2. Flujo transaccional completo de préstamo (`RF-09`) y devolución (`RF-10`), comprobando que el estado del equipo cambia de `Disponible` → `Prestado` → `Disponible` y que se generan los registros correspondientes en `movimientos_inventario`.
 3. Exactitud matemática de los agregados del Dashboard (`RF-13`) y los cuatro reportes gerenciales (`RF-14` a `RF-17`).
@@ -119,7 +119,7 @@ Adoptar **Clean Architecture** en el backend (`.NET 8`) y una arquitectura modul
 - La separación clara entre comandos de escritura (préstamos, devoluciones, cambios de estado) y consultas de lectura (Dashboard y los 4 reportes `RF-14` a `RF-17`) evitó acoplamientos accidentales y optimizó el tiempo de respuesta de los indicadores gerenciales.
 
 ### 8.2 Impacto de la Reutilización de Código y Principios SOLID
-La creación de la biblioteca de **13 componentes UI reutilizables** (`DataTable<T>`, `FormField`, `Select`, `Input`, `Badge`, `Card`, `Modal`, `ConfirmDialog`, `Toast`, `DatePicker`, entre otros) y de los hooks `useApi`, `useCarga`, `useDebounce` y `useForm`, junto con `FluentValidation` y `ReglaNegocioException` en C#, redujo significativamente la duplicación de código:
+La creación de la biblioteca de **14 componentes UI reutilizables** (`DataTable<T>`, `FormField`, `Select`, `Input`, `Badge`, `Card`, `Modal`, `ConfirmDialog`, `Toast`, `DatePicker`, `ErrorState`, entre otros) y de los hooks `useApi`, `useCarga`, `useDebounce` y `useForm`, junto con `FluentValidation` y `ReglaNegocioException` en C#, redujo significativamente la duplicación de código:
 - Cualquier mejora de accesibilidad (WCAG 2.1 AA), ordenamiento o paginación incorporada en `DataTable<T>` benefició instantáneamente a las 7 tablas del sistema (Usuarios, Equipos, Préstamos y los 4 Reportes).
 - La aplicación de los principios **SOLID** (especialmente *Single Responsibility* y *Open/Closed*) permitió agregar el módulo completo de Reportes en el Sprint 3 sin modificar el código existente de préstamos ni de inventario, previniendo regresiones.
 

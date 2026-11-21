@@ -28,7 +28,7 @@
 
 ### 2. Arquitectura y Estándares Aplicados (0:45 – 1:15)
 - **Discurso:**
-  *"Construimos el sistema bajo **Clean Architecture** en **ASP.NET Core 8** (`Domain`, `Application`, `Infrastructure`, `API`), **Entity Framework Core** con **PostgreSQL**, validación con **FluentValidation** y pruebas unitarias en **xUnit**. En el frontend usamos **React 19, TypeScript, Vite y Tailwind CSS**, con **React Hook Form + Zod** y 13 componentes UI reutilizables. Además, aplicamos principios de usabilidad DCU (ISO 9241-210), Shneiderman, Nielsen y Norman."*
+  *"Construimos el sistema bajo **Clean Architecture** en **ASP.NET Core 8** (`Domain`, `Application`, `Infrastructure`, `API`), **Entity Framework Core** con **PostgreSQL**, validación con **FluentValidation** y pruebas unitarias en **xUnit**. En el frontend usamos **React 19, TypeScript, Vite y Tailwind CSS**, con **React Hook Form + Zod** y 14 componentes UI reutilizables. Además, aplicamos principios de usabilidad DCU (ISO 9241-210), Shneiderman, Nielsen y Norman."*
 - **En pantalla:** Mostrar brevemente Swagger (`http://localhost:5080/swagger`) y regresar al Frontend.
 
 ---

@@ -20,7 +20,7 @@ Innovatech Solutions S.A.C. administraba su parque tecnológico (laptops, comput
 ┌────────────────────────────────────────────────────────────────────┐
 │  FRONTEND  React 19 + TypeScript + Vite + Tailwind CSS v4          │
 │  Puerto: 5173  │  Proxy /api → http://127.0.0.1:5080               │
-│  Validación: React Hook Form + Zod │ 13 Componentes UI + Hooks     │
+│  Validación: React Hook Form + Zod │ 14 Componentes UI + Hooks     │
 └──────────────────────────────────┬─────────────────────────────────┘
                                    │ HTTP/REST + JWT Bearer
 ┌──────────────────────────────────▼─────────────────────────────────┐
@@ -84,7 +84,7 @@ npm run dev
 ```bash
 dotnet test backend/TechAsset.sln
 ```
-- Ejecuta las **39 pruebas automatizadas** que cubren las reglas `RN-01` a `RN-10`, los 17 requerimientos funcionales, el flujo de solicitud (`Pendiente`) y aprobación de préstamos (`Activo`), autenticación JWT y validadores FluentValidation.
+- Ejecuta las **68 pruebas automatizadas** que cubren las reglas `RN-01` a `RN-10`, los 17 requerimientos funcionales, el flujo de solicitud (`Pendiente`) y aprobación de préstamos (`Activo`), autenticación JWT y validadores FluentValidation.
 
 ---
 
@@ -125,4 +125,4 @@ dotnet test backend/TechAsset.sln
 | Informe Técnico, Evidencias, Casos de Prueba y Pregunta de Reflexión | [`docs/informe-tecnico.md`](docs/informe-tecnico.md) |
 | Guion de Sustentación (5–7 min, 7 escenarios mínimos) | [`docs/guion-sustentacion.md`](docs/guion-sustentacion.md) |
 | Script DDL + Datos Semilla PostgreSQL | [`database/init_techasset.sql`](database/init_techasset.sql) |
-| Colección de Postman (52 peticiones y 81 aserciones automatizadas) | [`postman/TechAsset.postman_collection.json`](postman/TechAsset.postman_collection.json) |
+| Colección de Postman (72 peticiones y 105 aserciones automatizadas) | [`postman/TechAsset.postman_collection.json`](postman/TechAsset.postman_collection.json) |

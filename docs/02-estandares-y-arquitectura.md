@@ -59,11 +59,11 @@ TechAsset/
 │       ├── Middleware/                   # ManejoErroresMiddleware.cs
 │       └── Program.cs
 ├── tests/
-│   └── TechAsset.Tests/                  # Suite de pruebas unitarias xUnit (39 pruebas: RN-01 a RN-10 y servicios)
+│   └── TechAsset.Tests/                  # Suite de pruebas unitarias xUnit (68 pruebas: RN-01 a RN-10 y servicios)
 ├── frontend/
 │   └── src/
 │       ├── components/
-│       │   ├── ui/                       # 13 componentes UI reutilizables (Button, DataTable, Modal, FormField, Badge, etc.)
+│       │   ├── ui/                       # 14 componentes UI reutilizables (Button, DataTable, Modal, FormField, Badge, etc.)
 │       │   └── layout/                   # AppLayout, Sidebar, Header
 │       ├── context/                      # AuthContext.tsx, ThemeContext.tsx
 │       ├── hooks/                        # useApi.ts, useCarga.ts, useDebounce.ts, useForm.ts
@@ -74,7 +74,7 @@ TechAsset/
 ├── database/
 │   └── init_techasset.sql                # Script DDL PostgreSQL + Datos Semilla (9 usuarios, 24 equipos, 20 préstamos, 44 movimientos)
 ├── postman/
-│   └── TechAsset.postman_collection.json # Colección de pruebas de API REST (52 peticiones, 81 aserciones)
+│   └── TechAsset.postman_collection.json # Colección de pruebas de API REST (72 peticiones, 105 aserciones)
 └── docs/                                 # Documentación académica y técnica del proyecto
 ```
 
@@ -381,7 +381,7 @@ erDiagram
 flowchart TB
     subgraph ClienteWeb["Capa de Presentacion Cliente (React 19 + TypeScript + Vite + Tailwind CSS)"]
         Pages["Paginas Orquestadoras (LandingPage, LoginPage, DashboardPage, UsuariosPage, EquiposPage, PrestamosPage, ReportesPage)"]
-        UIComponents["13 Componentes UI Reutilizables (DataTable, Modal, FormField, Badge, Card, ConfirmDialog)"]
+        UIComponents["14 Componentes UI Reutilizables (DataTable, Modal, FormField, Badge, Card, ConfirmDialog)"]
         Hooks["Custom Hooks y Contexto (AuthContext, useApi, useCarga, useForm + Esquemas Zod)"]
         ApiClient["Cliente HTTP Centralizado (services/apiClient.ts con Interceptor JWT Bearer)"]
         Pages --> UIComponents

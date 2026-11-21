@@ -8,9 +8,9 @@
 
 ## 1. Catálogo de Componentes Reutilizables y Hooks en el Frontend
 
-Para evitar la duplicación de código visual y de comportamiento entre los módulos de **Usuarios**, **Equipos**, **Préstamos**, **Dashboard** y **Reportes**, se diseñó una biblioteca interna de **13 componentes UI desacoplados** y **4 custom hooks** (`useApi`, `useCarga`, `useDebounce`, `useForm`) ubicados en `frontend/src/components/ui/` y `frontend/src/hooks/`:
+Para evitar la duplicación de código visual y de comportamiento entre los módulos de **Usuarios**, **Equipos**, **Préstamos**, **Dashboard** y **Reportes**, se diseñó una biblioteca interna de **14 componentes UI desacoplados** y **4 custom hooks** (`useApi`, `useCarga`, `useDebounce`, `useForm`) ubicados en `frontend/src/components/ui/` y `frontend/src/hooks/`:
 
-### 1.1 Los 13 Componentes de Interfaz Reutilizables
+### 1.1 Los 14 Componentes de Interfaz Reutilizables
 
 | # | Componente | Archivo | Responsabilidad y Parametrización (`Props`) | Dónde se Reutiliza |
 | :-: | :--- | :--- | :--- | :--- |
@@ -27,6 +27,7 @@ Para evitar la duplicación de código visual y de comportamiento entre los mód
 | 11 | **`EmptyState`** | `ui/EmptyState.tsx` | Vista informativa cuando una consulta o filtro no arroja resultados. | Integrado en `DataTable<T>` y secciones sin datos. |
 | 12 | **`Spinner`** | `ui/Spinner.tsx` | Indicador visual de progreso asíncrono accesible durante cargas de API. | `AppLayout`, `DataTable` y vistas con carga inicial. |
 | 13 | **`DatePicker`** | `ui/DatePicker.tsx` | Selector de fechas controlado con soporte para límites mínimo/máximo (`RN-04`). | Formularios y filtros de rango en `PrestamosPage` y `ReportesPage`. |
+| 14 | **`ErrorState`** | `ui/ErrorState.tsx` | Estado accesible de error de carga (`role="alert"`) con mensaje descriptivo y botón de reintento. | `DashboardPage`, `EquiposPage`, `PrestamosPage`, `UsuariosPage` y `ReportesPage`. |
 
 ### 1.2 Custom Hooks Reutilizables
 - **`useApi<T>` (`src/hooks/useApi.ts`):** Encapsula el ciclo de vida completo de peticiones HTTP asíncronas (`data`, `cargando`, `error`, `ejecutar`), extrayendo el mensaje estructurado enviado por el backend cuando se activa una regla de negocio (`RN-01`..`RN-10`).
@@ -39,7 +40,7 @@ Para evitar la duplicación de código visual y de comportamiento entre los mód
 ### 2.1 Pilares de POO Aplicados en TechAsset
 1. **Encapsulamiento y Modelo de Dominio Rico:** Las entidades `Equipo`, `Prestamo` y `Usuario` no son simples contenedores pasivos de datos; incluyen métodos de comportamiento de dominio (`Equipo.ValidarDisponibleParaPrestamo()`, `Equipo.MarcarComoPrestado()`, `Equipo.DarDeBajaLogica()`, `Prestamo.Crear()`, `Prestamo.CrearSolicitud()`, `Prestamo.Aprobar()`, `Prestamo.RegistrarDevolucion()`, `Usuario.CambiarEstado()`) que protegen las invariantes de negocio.
 2. **Abstracción y Centralización de Catálogos:** La capa de Aplicación define contratos claros (`IAuthService`, `IUsuarioService`, `IEquipoService`, `IPrestamoService`, `IReporteService`) y `CatalogosDominio.cs` centraliza roles, estados, categorías, áreas (`Areas.InfraestructuraSoporte`), credenciales por defecto y mensajes `RN-xx` sin literales repetidos.
-3. **Polimorfismo e Inyección de Dependencias:** Los servicios consumen abstracciones inyectadas en el contenedor IoC de ASP.NET Core 8, lo que permite sustituir PostgreSQL por bases de datos en memoria durante las 39 pruebas unitarias en `TechAsset.Tests`.
+3. **Polimorfismo e Inyección de Dependencias:** Los servicios consumen abstracciones inyectadas en el contenedor IoC de ASP.NET Core 8, lo que permite sustituir PostgreSQL por bases de datos en memoria durante las 68 pruebas unitarias en `TechAsset.Tests`.
 
 ### 2.2 Los 5 Principios SOLID en la Arquitectura del Proyecto
 
@@ -49,7 +50,7 @@ Para evitar la duplicación de código visual y de comportamiento entre los mód
 | **O — Open/Closed Principle (Abierto/Cerrado)** | El componente `DataTable<T>` y las políticas/validadores FluentValidation están abiertos a extensión (nuevas columnas con `render` personalizado o nuevos validadores) sin alterar el motor base. | Se agregaron los 4 reportes (`RF-14` a `RF-17`) y el flujo `Pendiente`/aprobación reutilizando la arquitectura base. |
 | **L — Liskov Substitution Principle (Sustitución de Liskov)** | Las implementaciones de servicios cumplen estrictamente las precondiciones y postcondiciones de sus interfaces (`IEquipoService`, `IPrestamoService`), respondiendo contratos `ErrorRespuestaDto` uniformes ante `ReglaNegocioException`. | Comportamiento predecible tanto contra PostgreSQL en producción como en las pruebas unitarias con `xUnit`. |
 | **I — Interface Segregation Principle (Segregación de Interfaces)** | En lugar de un único servicio monolítico, los contratos están segregados por cohesión funcional: `IAuthService` (sin el código muerto `/api/auth/demo-users`), `IUsuarioService`, `IEquipoService`, `IPrestamoService` e `IReporteService`. | Cada controlador o consumidor depende exclusivamente de los métodos que realmente utiliza. |
-| **D — Dependency Inversion Principle (Inversión de Dependencias)** | Los controladores de `TechAsset.API` y validadores dependen de las interfaces y DTOs definidos en `TechAsset.Application.Interfaces`, nunca de clases concretas de infraestructura. | Permite probar todas las reglas `RN-01` a `RN-10` en segundos mediante 39 pruebas unitarias aisladas. |
+| **D — Dependency Inversion Principle (Inversión de Dependencias)** | Los controladores de `TechAsset.API` y validadores dependen de las interfaces y DTOs definidos en `TechAsset.Application.Interfaces`, nunca de clases concretas de infraestructura. | Permite probar todas las reglas `RN-01` a `RN-10` en segundos mediante 68 pruebas unitarias aisladas. |
 
 ---
 
@@ -325,6 +326,6 @@ const columnasEquipos: ColumnDef<EquipoDto>[] = [
 | Métrica de Calidad de Software | Antes de Refactorizar | Después de Refactorizar | Mejora Lograda |
 | :--- | :---: | :---: | :---: |
 | **Líneas promedio por Controlador REST (.NET 8)** | ~145 líneas | ~45 líneas (6 archivos) | **-69.0%** (Controladores delgados) |
-| **Duplicación de marcado en Tablas y Formularios React** | ~520 líneas repetidas | 0 líneas (centralizado en `ui/`) | **100%** reutilizado en 13 componentes |
-| **Cobertura de las 10 Reglas de Negocio (`RN-01`..`RN-10`)** | Parcial y dispersa en UI/Controlador | 100% centralizada y probada en `xUnit` | **39/39 pruebas xUnit y 52/52 peticiones Postman (81 aserciones)** |
+| **Duplicación de marcado en Tablas y Formularios React** | ~520 líneas repetidas | 0 líneas (centralizado en `ui/`) | **100%** reutilizado en 14 componentes |
+| **Cobertura de las 10 Reglas de Negocio (`RN-01`..`RN-10`)** | Parcial y dispersa en UI/Controlador | 100% centralizada y probada en `xUnit` | **68/68 pruebas xUnit y 72/72 peticiones Postman (105 aserciones)** |
 | **Consistencia de respuestas de error HTTP** | Textos planos heterogéneos | Contrato JSON uniforme `{ exito, codigo, mensaje, errores }` | **Trazabilidad directa en UI y Postman** |
