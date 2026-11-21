@@ -30,7 +30,7 @@ export const Card: React.FC<CardProps> = ({
               </h3>
             )}
             {subtitle && (
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>
+              <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{subtitle}</p>
             )}
           </div>
           {headerRight && <div className="flex items-center gap-2">{headerRight}</div>}
@@ -117,12 +117,12 @@ export const StatCard: React.FC<StatCardProps> = ({
       }
       className={`rounded-xl border border-slate-200/90 bg-white p-5 shadow-xs transition-all dark:border-slate-800 dark:bg-slate-900 ${
         style.border
-      } ${onClick ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-md' : ''}`}
+      } ${onClick ? 'cursor-pointer hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600' : ''}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <p className="text-xs font-semibold tracking-wider text-slate-500 uppercase dark:text-slate-400">
+            <p className="text-xs font-semibold tracking-wider text-slate-600 uppercase dark:text-slate-400">
               {title}
             </p>
             {badgeText && (
@@ -135,7 +135,7 @@ export const StatCard: React.FC<StatCardProps> = ({
             {value}
           </p>
           {subtitle && (
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{subtitle}</p>
           )}
         </div>
         <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${style.iconBg}`}>

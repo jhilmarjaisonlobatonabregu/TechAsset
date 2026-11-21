@@ -73,11 +73,11 @@ export function EquipoFormModal({ open, equipo, onClose, onGuardado }: EquipoFor
       open={open}
       onClose={onClose}
       title={esEdicion ? 'Actualizar equipo' : 'Registrar equipo'}
-      subtitle="RF-05 / RF-06 · El código patrimonial debe ser único (RN-07)"
+      subtitle="El código patrimonial debe ser único"
       size="lg"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose} type="button">Cancelar</Button>
+          <Button variant="outline" onClick={onClose} type="button">Cancelar</Button>
           <Button type="submit" form="form-equipo" loading={isSubmitting}>{esEdicion ? 'Guardar cambios' : 'Registrar equipo'}</Button>
         </>
       }
@@ -88,11 +88,11 @@ export function EquipoFormModal({ open, equipo, onClose, onGuardado }: EquipoFor
             {errorServidor}
           </div>
         )}
-        <FormField label="Código patrimonial" htmlFor="eq-codigo" required error={errors.codigoPatrimonial?.message} ruleBadge="RN-07">
-          <Input id="eq-codigo" placeholder="INV-LAP-0001" hasError={Boolean(errors.codigoPatrimonial)} {...register('codigoPatrimonial')} />
+        <FormField label="Código patrimonial" htmlFor="eq-codigo" required error={errors.codigoPatrimonial?.message}>
+          <Input id="eq-codigo" placeholder="INV-LAP-001" hasError={Boolean(errors.codigoPatrimonial)} {...register('codigoPatrimonial')} />
         </FormField>
         <FormField label="Nombre del equipo" htmlFor="eq-nombre" required error={errors.nombre?.message}>
-          <Input id="eq-nombre" placeholder="Laptop Dell Latitude 5440" hasError={Boolean(errors.nombre)} {...register('nombre')} />
+          <Input id="eq-nombre" placeholder="Ej. Latitude 5540 Core i7" hasError={Boolean(errors.nombre)} {...register('nombre')} />
         </FormField>
         <FormField label="Categoría" htmlFor="eq-categoria" required error={errors.categoria?.message}>
           <Select id="eq-categoria" options={CATEGORIAS_EQUIPO.map((c) => ({ value: c, label: c }))} hasError={Boolean(errors.categoria)} {...register('categoria')} />

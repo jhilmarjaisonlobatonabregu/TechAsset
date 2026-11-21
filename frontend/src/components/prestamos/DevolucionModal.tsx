@@ -56,10 +56,10 @@ export function DevolucionModal({ prestamo, onClose, onGuardado }: DevolucionMod
       open={prestamo !== null}
       onClose={onClose}
       title="Registrar devolución"
-      subtitle="RF-10 · Toda devolución exige observaciones (RN-10)"
+      subtitle="Toda devolución requiere observaciones"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose} type="button">Cancelar</Button>
+          <Button variant="outline" onClick={onClose} type="button">Cancelar</Button>
           <Button type="submit" form="form-devolucion" variant="success" loading={isSubmitting}>Confirmar devolución</Button>
         </>
       }
@@ -80,7 +80,7 @@ export function DevolucionModal({ prestamo, onClose, onGuardado }: DevolucionMod
         <FormField label="Estado del equipo recibido" htmlFor="dv-estado" required error={errors.estadoEquipoDestino?.message} helperText="Elija «Mantenimiento» si el equipo regresa con fallas.">
           <Select id="dv-estado" options={[{ value: 'Disponible', label: 'Disponible — en buen estado' }, { value: 'Mantenimiento', label: 'Mantenimiento — requiere revisión' }]} {...register('estadoEquipoDestino')} />
         </FormField>
-        <FormField label="Observaciones de la devolución" htmlFor="dv-obs" required ruleBadge="RN-10" error={errors.observacion?.message}>
+        <FormField label="Observaciones de la devolución" htmlFor="dv-obs" required error={errors.observacion?.message}>
           <Input id="dv-obs" placeholder="Ej. Se entrega con cargador y sin daños visibles" hasError={Boolean(errors.observacion)} {...register('observacion')} />
         </FormField>
       </form>

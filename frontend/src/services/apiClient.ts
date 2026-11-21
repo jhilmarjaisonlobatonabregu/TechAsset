@@ -38,6 +38,13 @@ export function limpiarSesionLocal(): void {
   localStorage.removeItem(STORAGE_USER_KEY);
 }
 
+type ManejadorSesionVencida = () => void;
+let manejadorSesionVencida: ManejadorSesionVencida | null = null;
+
+export function registrarManejadorSesionVencida(manejador: ManejadorSesionVencida | null): void {
+  manejadorSesionVencida = manejador;
+}
+
 const API_BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) || '/api';
 
 function construirQueryString(params?: Record<string, string | number | boolean | undefined | null>): string {
@@ -57,7 +64,7 @@ async function request<T>(
   options: RequestInit = {},
   queryParams?: Record<string, string | number | boolean | undefined | null>,
 ): Promise<T> {
-  const { token, usuario } = obtenerSesionGuardada();
+  const { token } = obtenerSesionGuardada();
 
   const headers = new Headers(options.headers);
   if (!headers.has('Content-Type') && options.body) {
@@ -67,10 +74,6 @@ async function request<T>(
 
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
-  }
-  if (usuario) {
-    headers.set('X-Usuario-Id', String(usuario.id));
-    headers.set('X-Usuario-Rol', usuario.rol);
   }
 
   const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}${construirQueryString(queryParams)}`;
@@ -83,7 +86,7 @@ async function request<T>(
     });
   } catch {
     throw new ApiError(
-      'No se pudo establecer conexión con el servidor backend (http://127.0.0.1:5080). Verifique que el servicio API esté activo.',
+      'El servidor no responde. Intente de nuevo en unos minutos.',
       0,
       'ERR-RED',
     );
@@ -109,21 +112,27 @@ async function request<T>(
   }
 
   if (!response.ok) {
+    const esRutaLogin = endpoint === '/auth/login' || endpoint === 'auth/login';
+    if (response.status === 401 && token && !esRutaLogin) {
+      limpiarSesionLocal();
+      manejadorSesionVencida?.();
+      throw new ApiError('Su sesión venció. Inicie sesión de nuevo.', 401, 'AUTH-401');
+    }
+
     const errPayload = (body ?? {}) as BackendErrorPayload;
+    const fallbackMensaje =
+      response.status === 403
+        ? 'No tiene permiso para ver esta información.'
+        : 'No se pudo completar la solicitud.';
     const mensajeExtraido =
       errPayload.mensaje ||
       errPayload.message ||
       (Array.isArray(errPayload.errores) && errPayload.errores.length > 0
         ? errPayload.errores.join(' ')
-        : `Error en la solicitud HTTP (${response.status})`);
-
-    const mensajeConCodigo =
-      errPayload.codigo && !mensajeExtraido.includes(errPayload.codigo)
-        ? `[${errPayload.codigo}] ${mensajeExtraido}`
-        : mensajeExtraido;
+        : fallbackMensaje);
 
     throw new ApiError(
-      mensajeConCodigo,
+      mensajeExtraido,
       response.status,
       errPayload.codigo,
       errPayload.errores ?? [],
@@ -133,7 +142,7 @@ async function request<T>(
   if (body && typeof body === 'object' && 'exito' in body) {
     const typedBody = body as BackendErrorPayload & { datos?: T; data?: T };
     if (typedBody.exito === false) {
-      const msg = typedBody.mensaje || typedBody.message || 'Operación rechazada por regla de negocio.';
+      const msg = typedBody.mensaje || typedBody.message || 'No se pudo completar la operación.';
       throw new ApiError(msg, response.status, typedBody.codigo, typedBody.errores ?? []);
     }
     if ('datos' in typedBody && typedBody.datos !== undefined) {

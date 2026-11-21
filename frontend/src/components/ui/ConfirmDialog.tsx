@@ -24,7 +24,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   title,
   description,
-  ruleCode,
   ruleExplanation,
   confirmLabel = 'Confirmar acción',
   cancelLabel = 'Cancelar',
@@ -65,13 +64,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </p>
         </div>
 
-        {ruleCode && ruleExplanation && (
+        {ruleExplanation && (
           <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3.5 dark:border-amber-800/70 dark:bg-amber-950/40">
-            <div className="flex items-center gap-2 text-xs font-bold text-amber-900 dark:text-amber-300">
-              <ShieldAlert className="h-4 w-4 shrink-0" />
-              <span>Regla de Negocio Aplicable ({ruleCode})</span>
+            <div className="flex items-center gap-2 text-sm font-bold text-amber-900 dark:text-amber-300">
+              <ShieldAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>Información importante</span>
             </div>
-            <p className="mt-1 text-xs leading-relaxed text-amber-800 dark:text-amber-200/90">
+            <p className="mt-1 text-sm leading-relaxed text-amber-800 dark:text-amber-200/90">
               {ruleExplanation}
             </p>
           </div>

@@ -84,6 +84,26 @@ public class UsuarioService : IUsuarioService
         return MapearDto(usuario);
     }
 
+    public async Task<IReadOnlyList<UsuarioMinimoDto>> ListarHabilitadosMinimoAsync(CancellationToken ct = default)
+    {
+        var usuarios = await _db.Usuarios
+            .AsNoTracking()
+            .Where(u => u.Estado)
+            .OrderBy(u => u.Apellidos)
+            .ThenBy(u => u.Nombres)
+            .Select(u => new { u.Id, u.Nombres, u.Apellidos, u.Area })
+            .ToListAsync(ct);
+
+        return usuarios
+            .Select(u => new UsuarioMinimoDto
+            {
+                Id = u.Id,
+                NombreCompleto = $"{u.Nombres} {u.Apellidos}".Trim(),
+                Area = u.Area
+            })
+            .ToList();
+    }
+
     public async Task<UsuarioDto> CrearAsync(CrearUsuarioDto dto, CancellationToken ct = default)
     {
         var correoNorm = dto.Correo.Trim().ToLowerInvariant();

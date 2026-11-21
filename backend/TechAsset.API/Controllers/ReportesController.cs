@@ -7,7 +7,7 @@ using TechAsset.Domain.Constants;
 namespace TechAsset.API.Controllers;
 
 /// <summary>RF-14 a RF-17: reportes.</summary>
-[Authorize(Roles = $"{Roles.Administrador},{Roles.ResponsableTecnologia}")]
+[Authorize(Roles = Roles.Administrador)]
 public class ReportesController : ApiControllerBase
 {
     private readonly IReporteService _reportes;

@@ -27,7 +27,7 @@ export const FormField: React.FC<FormFieldProps> = ({
       <div className="flex items-center justify-between gap-2">
         <label
           htmlFor={htmlFor}
-          className="text-xs font-semibold tracking-wide text-slate-700 uppercase dark:text-slate-300"
+          className="text-sm font-semibold text-slate-700 dark:text-slate-300"
         >
           {label}
           {required && <span className="ml-1 text-rose-600 dark:text-rose-400">*</span>}
@@ -51,7 +51,7 @@ export const FormField: React.FC<FormFieldProps> = ({
         </p>
       ) : (
         helperText && (
-          <p className="text-xs text-slate-500 dark:text-slate-400">{helperText}</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">{helperText}</p>
         )
       )}
     </div>

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError } from '../services/apiClient';
+import { mensajeErrorCarga } from '../utils/errores';
 
 export interface UseCargaResult<T> {
   datos: T;
   cargando: boolean;
+  cargado: boolean;
   error: string | null;
   recargar: () => Promise<void>;
 }
@@ -15,6 +16,7 @@ export interface UseCargaResult<T> {
 export function useCarga<T>(cargador: () => Promise<T>, valorInicial: T, dependencias: readonly unknown[]): UseCargaResult<T> {
   const [datos, setDatos] = useState<T>(valorInicial);
   const [cargando, setCargando] = useState(true);
+  const [cargado, setCargado] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const cargadorRef = useRef(cargador);
   cargadorRef.current = cargador;
@@ -26,10 +28,14 @@ export function useCarga<T>(cargador: () => Promise<T>, valorInicial: T, depende
     setError(null);
     try {
       const resultado = await cargadorRef.current();
-      if (solicitud === solicitudRef.current) setDatos(resultado);
+      if (solicitud === solicitudRef.current) {
+        setDatos(resultado);
+        setCargado(true);
+      }
     } catch (err: unknown) {
       if (solicitud === solicitudRef.current) {
-        setError(err instanceof ApiError || err instanceof Error ? err.message : 'No se pudo cargar la información.');
+        setCargado(false);
+        setError(mensajeErrorCarga(err));
       }
     } finally {
       if (solicitud === solicitudRef.current) setCargando(false);
@@ -41,5 +47,5 @@ export function useCarga<T>(cargador: () => Promise<T>, valorInicial: T, depende
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recargar, ...dependencias]);
 
-  return { datos, cargando, error, recargar };
+  return { datos, cargando, cargado, error, recargar };
 }

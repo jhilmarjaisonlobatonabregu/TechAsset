@@ -120,7 +120,7 @@ export function DataTable<T>({
                       <button
                         type="button"
                         onClick={() => handleSort(col)}
-                        className="inline-flex cursor-pointer items-center gap-1.5 font-semibold uppercase hover:text-blue-600 dark:hover:text-blue-400"
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-sm font-semibold uppercase hover:text-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:hover:text-blue-400"
                       >
                         <span>{col.header}</span>
                         {isSorted ? (
@@ -161,7 +161,7 @@ export function DataTable<T>({
         </table>
       </div>
 
-      <div className="no-print flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 bg-slate-50/50 px-4 py-3 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-400">
+      <div className="no-print flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 bg-slate-50/50 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/50 dark:text-slate-400">
         <div className="flex items-center gap-2">
           <span>
             Mostrando{' '}
@@ -176,7 +176,7 @@ export function DataTable<T>({
             <strong className="font-semibold text-slate-900 dark:text-slate-200">
               {totalItems}
             </strong>{' '}
-            registros
+            {totalItems === 1 ? 'registro' : 'registros'}
           </span>
           <span className="text-slate-300 dark:text-slate-700">|</span>
           <label className="inline-flex items-center gap-1.5">
@@ -187,7 +187,7 @@ export function DataTable<T>({
                 setPageSize(Number(e.target.value));
                 setCurrentPage(1);
               }}
-              className="rounded border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              className="rounded border border-slate-300 bg-white px-2 py-1 text-sm font-medium text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
             >
               {pageSizeOptions.map((opt) => (
                 <option key={opt} value={opt}>
@@ -203,7 +203,7 @@ export function DataTable<T>({
             type="button"
             disabled={safePage <= 1}
             onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 font-medium text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             <ChevronLeft className="h-3.5 w-3.5" />
             <span>Anterior</span>
@@ -215,7 +215,7 @@ export function DataTable<T>({
             type="button"
             disabled={safePage >= totalPages}
             onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-slate-300 bg-white px-2.5 py-1 font-medium text-slate-700 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
           >
             <span>Siguiente</span>
             <ChevronRight className="h-3.5 w-3.5" />

@@ -63,15 +63,15 @@ export function UsuarioFormModal({ open, usuario, onClose, onGuardado }: Usuario
       open={open}
       onClose={onClose}
       title={esEdicion ? 'Actualizar usuario' : 'Registrar usuario'}
-      subtitle="RF-01 / RF-02 · El correo debe ser único (RN-08)"
+      subtitle="El correo institucional debe ser único"
       size="lg"
-      footer={<><Button variant="ghost" type="button" onClick={onClose}>Cancelar</Button><Button type="submit" form="form-usuario" loading={isSubmitting}>{esEdicion ? 'Guardar cambios' : 'Registrar usuario'}</Button></>}
+      footer={<><Button variant="outline" type="button" onClick={onClose}>Cancelar</Button><Button type="submit" form="form-usuario" loading={isSubmitting}>{esEdicion ? 'Guardar cambios' : 'Registrar usuario'}</Button></>}
     >
       <form id="form-usuario" onSubmit={onSubmit} noValidate className="grid gap-4 sm:grid-cols-2">
         {errorServidor && <div role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 sm:col-span-2 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">{errorServidor}</div>}
         <FormField label="Nombres" htmlFor="us-nombres" required error={errors.nombres?.message}><Input id="us-nombres" hasError={Boolean(errors.nombres)} {...register('nombres')} /></FormField>
         <FormField label="Apellidos" htmlFor="us-apellidos" required error={errors.apellidos?.message}><Input id="us-apellidos" hasError={Boolean(errors.apellidos)} {...register('apellidos')} /></FormField>
-        <FormField label="Correo institucional" htmlFor="us-correo" required ruleBadge="RN-08" error={errors.correo?.message}><Input id="us-correo" type="email" placeholder="usuario@innovatech.pe" hasError={Boolean(errors.correo)} {...register('correo')} /></FormField>
+        <FormField label="Correo institucional" htmlFor="us-correo" required error={errors.correo?.message}><Input id="us-correo" type="email" placeholder="usuario@innovatech.pe" hasError={Boolean(errors.correo)} {...register('correo')} /></FormField>
         <FormField label="Área" htmlFor="us-area" required error={errors.area?.message}><Select id="us-area" placeholder="Seleccione…" hasError={Boolean(errors.area)} options={AREAS_ORGANIZACION.map((a) => ({ value: a, label: a }))} {...register('area')} /></FormField>
         <FormField label="Rol" htmlFor="us-rol" required error={errors.rol?.message}><Select id="us-rol" hasError={Boolean(errors.rol)} options={ROLES_USUARIO.map((r) => ({ value: r, label: r }))} {...register('rol')} /></FormField>
         {!esEdicion && (

@@ -18,6 +18,7 @@ public interface IUsuarioService
         CancellationToken ct = default);
 
     Task<UsuarioDto> ObtenerPorIdAsync(Guid id, CancellationToken ct = default);
+    Task<IReadOnlyList<UsuarioMinimoDto>> ListarHabilitadosMinimoAsync(CancellationToken ct = default);
     Task<UsuarioDto> CrearAsync(CrearUsuarioDto dto, CancellationToken ct = default);
     Task<UsuarioDto> ActualizarAsync(Guid id, ActualizarUsuarioDto dto, string? rolActor = null, CancellationToken ct = default);
     Task<UsuarioDto> CambiarEstadoAsync(Guid id, bool nuevoEstado, string? rolActor, string? motivo = null, CancellationToken ct = default);

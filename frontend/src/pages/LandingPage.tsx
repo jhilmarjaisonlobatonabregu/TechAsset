@@ -1,10 +1,10 @@
 import {
   AlertTriangle,
   ArrowLeftRight,
-  ArrowRight,
   BarChart3,
   Building2,
   CheckCircle2,
+  Clock,
   Cpu,
   FileSpreadsheet,
   Laptop,
@@ -13,6 +13,7 @@ import {
   Monitor,
   Moon,
   Network,
+  PackageCheck,
   Printer,
   Projector,
   ShieldCheck,
@@ -22,6 +23,7 @@ import {
   Users,
   Wrench,
 } from 'lucide-react';
+import landingHero from '../assets/images/landing-hero.png';
 import { Badge, Button, Card } from '../components/ui';
 import { useTheme } from '../context/ThemeContext';
 
@@ -29,30 +31,69 @@ export interface LandingPageProps {
   onIniciarSesion: () => void;
 }
 
+function OndaDecorativa({
+  posicion,
+  className,
+}: {
+  posicion: 'arriba' | 'abajo';
+  className: string;
+}) {
+  const path =
+    posicion === 'arriba'
+      ? 'M0,0 L1440,0 L1440,48 C1140,104 720,16 360,64 C180,88 80,68 0,44 Z'
+      : 'M0,120 L1440,120 L1440,68 C1140,12 720,100 360,52 C180,28 80,48 0,72 Z';
+
+  return (
+    <svg
+      viewBox="0 0 1440 120"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      className={`pointer-events-none absolute inset-x-0 h-16 w-full sm:h-24 ${
+        posicion === 'arriba' ? 'top-0' : 'bottom-0'
+      } ${className}`}
+    >
+      <path fill="currentColor" d={path} />
+    </svg>
+  );
+}
+
 const PROBLEMAS_RESUELTOS = [
   {
     titulo: 'Pérdida de información',
-    descripcion:
-      'Sustituye las hojas de cálculo aisladas por una base de datos centralizada con respaldo e integridad referencial.',
+    descripcion: 'Una base de datos centralizada reemplaza las hojas de cálculo.',
     icono: FileSpreadsheet,
   },
   {
     titulo: 'Duplicidad de registros',
-    descripcion:
-      'Garantiza que cada activo tecnológico tenga un código patrimonial único y cada usuario un correo institucional único.',
+    descripcion: 'El código patrimonial y el correo electrónico no se pueden repetir.',
     icono: AlertTriangle,
   },
   {
     titulo: 'Falta de control de préstamos',
     descripcion:
-      'Registra cada solicitud, aprobación, entrega y devolución con responsable asignado, fechas válidas y observaciones.',
+      'Cada préstamo se solicita, se aprueba y se devuelve con responsable y observaciones.',
     icono: ArrowLeftRight,
   },
   {
-    titulo: 'Ubicación y disponibilidad desconocidas',
-    descripcion:
-      'Permite conocer en todo momento qué equipos están disponibles, prestados, en mantenimiento o dados de baja y en qué área se encuentran.',
+    titulo: 'Desconocimiento de la ubicación de los equipos',
+    descripcion: 'Cada equipo prestado queda asociado a su usuario y a su área.',
     icono: MapPinOff,
+  },
+  {
+    titulo: 'Dificultad para conocer la disponibilidad de activos',
+    descripcion:
+      'El inventario muestra qué equipos están disponibles, prestados, en mantenimiento o de baja.',
+    icono: PackageCheck,
+  },
+  {
+    titulo: 'Ausencia de indicadores para la toma de decisiones',
+    descripcion: 'El dashboard muestra los indicadores de equipos y préstamos.',
+    icono: BarChart3,
+  },
+  {
+    titulo: 'Procesos lentos para la asignación y devolución de equipos',
+    descripcion: 'La solicitud, la aprobación y la devolución se registran en el mismo sistema.',
+    icono: Clock,
   },
 ] as const;
 
@@ -149,8 +190,8 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans">
-      {/* Encabezado institucional con acceso directo al inicio de sesión */}
-      <header className="sticky top-0 z-30 border-b border-slate-200/90 bg-white/95 backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/95">
+      {/* Encabezado institucional fijo y opaco */}
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-xs">
@@ -160,7 +201,7 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
               <span className="block text-lg font-bold tracking-tight text-slate-900 dark:text-white">
                 TechAsset
               </span>
-              <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="block text-sm font-medium text-slate-600 dark:text-slate-400">
                 Innovatech Solutions S.A.C.
               </span>
             </div>
@@ -172,7 +213,7 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
               onClick={toggleDarkMode}
               className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-white"
               aria-label={darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-              title={darkMode ? 'Modo claro' : 'Modo oscuro'}
+              title={darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             >
               {darkMode ? (
                 <Sun className="h-4 w-4" aria-hidden="true" />
@@ -196,10 +237,25 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
         {/* Presentación y propósito del sistema */}
         <section
           aria-labelledby="titulo-principal"
-          className="border-b border-slate-200/80 bg-white py-12 sm:py-16 dark:border-slate-800/80 dark:bg-slate-900"
+          className="relative overflow-hidden border-b border-sky-100/90 bg-sky-50 py-14 sm:py-16 lg:py-20 dark:border-slate-800 dark:bg-[#0B1120]"
         >
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <div className="max-w-3xl space-y-5">
+          <img
+            src={landingHero}
+            alt=""
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover object-right"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-[#f8fbff]/88 lg:bg-transparent lg:bg-gradient-to-r lg:from-[#f8fbff]/85 lg:via-[#f8fbff]/70 lg:to-transparent dark:hidden"
+          />
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 hidden bg-[#0B1120]/88 lg:bg-transparent lg:bg-gradient-to-r lg:from-[#0B1120]/90 lg:via-[#0B1120]/85 lg:to-[#0B1120]/70 dark:block"
+          />
+
+          <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
+            <div className="max-w-xl space-y-5 lg:max-w-[54%]">
               <Badge variant="blue" dot>
                 Innovatech Solutions S.A.C. · Gerencia de Tecnología
               </Badge>
@@ -209,7 +265,7 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
               >
                 Sistema de Gestión de Inventario y Préstamo de Equipos Tecnológicos
               </h1>
-              <p className="text-base leading-relaxed text-slate-600 sm:text-lg dark:text-slate-300">
+              <p className="text-base leading-relaxed text-slate-700 sm:text-lg dark:text-slate-200">
                 <strong>TechAsset</strong> tiene como propósito administrar el inventario tecnológico
                 institucional y controlar el préstamo de equipos a los colaboradores de{' '}
                 <strong>Innovatech Solutions S.A.C.</strong> en sus diversas áreas funcionales.
@@ -219,8 +275,7 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
                   variant="primary"
                   size="lg"
                   onClick={onIniciarSesion}
-                  leftIcon={<LogIn className="h-5 w-5" aria-hidden="true" />}
-                  rightIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
+                  leftIcon={<LogIn className="h-4 w-4" aria-hidden="true" />}
                 >
                   Iniciar sesión
                 </Button>
@@ -230,8 +285,15 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
         </section>
 
         {/* Problema que resuelve */}
-        <section aria-labelledby="titulo-problema" className="py-12 sm:py-14">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <section
+          aria-labelledby="titulo-problema"
+          className="relative overflow-hidden bg-gradient-to-b from-sky-50/70 via-slate-50 to-slate-50 py-12 sm:py-14 dark:from-slate-950 dark:via-slate-950 dark:to-slate-950"
+        >
+          <OndaDecorativa
+            posicion="abajo"
+            className="text-sky-100/80 dark:text-sky-950/30"
+          />
+          <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
             <div className="max-w-3xl">
               <h2
                 id="titulo-problema"
@@ -245,7 +307,7 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
               </p>
             </div>
 
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {PROBLEMAS_RESUELTOS.map((item) => {
                 const Icono = item.icono;
                 return (
@@ -253,10 +315,10 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/70 dark:text-blue-400">
                       <Icono className="h-5 w-5" aria-hidden="true" />
                     </div>
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
+                    <h3 className="text-base font-semibold text-slate-900 dark:text-white">
                       {item.titulo}
                     </h3>
-                    <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                    <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
                       {item.descripcion}
                     </p>
                   </Card>
@@ -269,9 +331,13 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
         {/* Qué ofrece el sistema: 4 módulos del alcance funcional */}
         <section
           aria-labelledby="titulo-modulos"
-          className="border-y border-slate-200/80 bg-white py-12 sm:py-14 dark:border-slate-800/80 dark:bg-slate-900"
+          className="relative overflow-hidden border-y border-sky-100/80 bg-white py-12 sm:py-14 dark:border-slate-800/80 dark:bg-slate-900"
         >
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <OndaDecorativa
+            posicion="arriba"
+            className="text-sky-50 dark:text-slate-800/40"
+          />
+          <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
             <div className="max-w-3xl">
               <h2
                 id="titulo-modulos"
@@ -280,8 +346,8 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
                 Alcance funcional del sistema
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-600 sm:text-base dark:text-slate-400">
-                La plataforma integra cuatro módulos funcionales con validación de reglas de negocio
-                e indicadores para la toma de decisiones:
+                La plataforma integra cuatro módulos para administrar usuarios, equipos, préstamos e
+                indicadores de gestión:
               </p>
             </div>
 
@@ -299,7 +365,7 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
                         <Icono className="h-5 w-5" aria-hidden="true" />
                       </div>
-                      <ul className="space-y-1.5 text-xs text-slate-600 sm:text-sm dark:text-slate-300">
+                      <ul className="space-y-1.5 text-sm text-slate-600 dark:text-slate-300">
                         {mod.funciones.map((fn) => (
                           <li key={fn} className="flex items-center gap-2">
                             <CheckCircle2
@@ -319,8 +385,15 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
         </section>
 
         {/* Tipos de equipos tecnológicos que gestiona */}
-        <section aria-labelledby="titulo-equipos" className="py-12 sm:py-14">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <section
+          aria-labelledby="titulo-equipos"
+          className="relative overflow-hidden bg-gradient-to-b from-sky-50/60 via-slate-50 to-sky-50/40 py-12 sm:py-14 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900/60"
+        >
+          <OndaDecorativa
+            posicion="abajo"
+            className="text-sky-100/75 dark:text-blue-950/30"
+          />
+          <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
             <div className="max-w-3xl">
               <h2
                 id="titulo-equipos"
@@ -346,7 +419,7 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-950/70 dark:text-blue-400">
                       <Icono className="h-5 w-5" aria-hidden="true" />
                     </div>
-                    <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                       {eq.nombre}
                     </span>
                   </Card>
@@ -359,9 +432,13 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
         {/* Actores y roles del sistema */}
         <section
           aria-labelledby="titulo-roles"
-          className="border-t border-slate-200/80 bg-white py-12 sm:py-14 dark:border-slate-800/80 dark:bg-slate-900"
+          className="relative overflow-hidden border-t border-sky-100/80 bg-white py-12 sm:py-14 dark:border-slate-800/80 dark:bg-slate-900"
         >
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <OndaDecorativa
+            posicion="arriba"
+            className="text-sky-50/90 dark:text-slate-800/35"
+          />
+          <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
             <div className="max-w-3xl">
               <h2
                 id="titulo-roles"
@@ -370,8 +447,7 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
                 Actores del sistema
               </h2>
               <p className="mt-2 text-sm leading-relaxed text-slate-600 sm:text-base dark:text-slate-400">
-                Acceso mediante autenticación JWT con permisos diferenciados según el rol dentro de
-                la organización:
+                Acceso con usuario y contraseña, con permisos según el rol dentro de la organización.
               </p>
             </div>
 
@@ -396,10 +472,10 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
                       <h3 className="text-base font-semibold text-slate-900 dark:text-white">
                         {actor.rol}
                       </h3>
-                      <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
                         {actor.resumen}
                       </p>
-                      <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                      <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
                         {actor.detalle}
                       </p>
                     </div>
@@ -413,18 +489,11 @@ export function LandingPage({ onIniciarSesion }: LandingPageProps) {
 
       {/* Pie de página institucional */}
       <footer className="border-t border-slate-200 bg-slate-100/80 py-6 dark:border-slate-800 dark:bg-slate-950">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 text-xs text-slate-500 sm:flex-row sm:px-6 dark:text-slate-400">
+        <div className="mx-auto max-w-6xl px-4 text-sm text-slate-600 sm:px-6 dark:text-slate-400">
           <p>
             <strong>TechAsset</strong> · Innovatech Solutions S.A.C. · Sistema de Gestión de
             Inventario y Préstamo de Equipos Tecnológicos
           </p>
-          <button
-            type="button"
-            onClick={onIniciarSesion}
-            className="cursor-pointer font-semibold text-blue-600 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:text-blue-400"
-          >
-            Ir a iniciar sesión
-          </button>
         </div>
       </footer>
     </div>

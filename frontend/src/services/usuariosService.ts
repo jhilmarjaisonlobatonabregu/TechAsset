@@ -3,6 +3,7 @@ import type {
   CrearUsuarioPayload,
   DeshabilitarUsuarioPayload,
   UsuarioDto,
+  UsuarioMinimoDto,
 } from '../types';
 import { apiClient } from './apiClient';
 
@@ -21,6 +22,9 @@ export const usuariosService = {
       rol: filtros?.rol,
       estado: filtros?.estado,
     }),
+
+  listarColaboradores: (): Promise<UsuarioMinimoDto[]> =>
+    apiClient.get<UsuarioMinimoDto[]>('/usuarios/colaboradores'),
 
   listarResponsables: (): Promise<UsuarioDto[]> => apiClient.get<UsuarioDto[]>('/usuarios/responsables'),
 

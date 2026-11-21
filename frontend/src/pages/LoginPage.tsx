@@ -2,30 +2,33 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   AlertCircle,
   ArrowLeft,
-  Building2,
   Eye,
   EyeOff,
   KeyRound,
   LogIn,
   Mail,
-  ShieldCheck,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Button, FormField, Input } from '../components/ui';
+import loginBg from '../assets/images/login.png';
+import logoOficial from '../assets/images/logo.png';
+import { Button, Card, FormField, Input } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { ApiError } from '../services/apiClient';
 import { mensajeError } from '../utils/errores';
 import { loginSchema, type LoginFormValues } from '../utils/esquemas';
 
 export interface LoginPageProps {
+  mensajeSesion?: string | null;
   onVolverLanding?: () => void;
+  onRecuperarContrasena?: () => void;
 }
 
-export function LoginPage({ onVolverLanding }: LoginPageProps) {
-  const { iniciarSesion } = useAuth();
+export function LoginPage({ mensajeSesion, onVolverLanding, onRecuperarContrasena }: LoginPageProps) {
+  const { iniciarSesion, limpiarAvisoSesion } = useAuth();
   const [errorServidor, setErrorServidor] = useState<string | null>(null);
   const [mostrarPassword, setMostrarPassword] = useState(false);
+  const alerta = errorServidor ?? mensajeSesion;
 
   const {
     register,
@@ -39,6 +42,7 @@ export function LoginPage({ onVolverLanding }: LoginPageProps) {
 
   const onSubmit = handleSubmit(async (valores) => {
     setErrorServidor(null);
+    limpiarAvisoSesion();
     try {
       await iniciarSesion(valores.correo.trim(), valores.password);
     } catch (err: unknown) {
@@ -57,37 +61,46 @@ export function LoginPage({ onVolverLanding }: LoginPageProps) {
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-5 bg-slate-50 dark:bg-slate-950 font-sans">
       {/* Panel izquierdo de marca e institucional — 60% en pantallas grandes (lg:col-span-3) */}
       <aside className="relative hidden lg:col-span-3 lg:flex flex-col justify-between overflow-hidden bg-slate-950 p-10 xl:p-16 text-white select-none">
-        {/* Capa de imagen de fondo opcional (object-cover) */}
-        {/* Para habilitar una imagen de fondo institucional, descomentar: */}
-        {/* <img src="/images/login-bg.webp" alt="" className="absolute inset-0 h-full w-full object-cover object-center pointer-events-none" /> */}
-
-        {/* Degradado azul de fondo y capa oscura (overlay) para contraste accesible WCAG AAA */}
-        <div
-          className="absolute inset-0 bg-gradient-to-br from-blue-950/90 via-slate-900/95 to-slate-950"
+        {/* Imagen tecnológica de fondo decorativa y nítida */}
+        <img
+          src={loginBg}
+          alt=""
           aria-hidden="true"
-        />
-        <div
-          className="absolute inset-0 bg-slate-950/50 backdrop-blur-[1px]"
-          aria-hidden="true"
-        />
-        <div
-          className="pointer-events-none absolute -top-24 -left-24 h-[500px] w-[500px] rounded-full bg-blue-600/15 blur-3xl"
-          aria-hidden="true"
-        />
-        <div
-          className="pointer-events-none absolute -bottom-24 -right-24 h-[500px] w-[500px] rounded-full bg-indigo-600/10 blur-3xl"
-          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
         />
 
-        {/* Encabezado del panel de marca: Logo + TechAsset / Innovatech Solutions S.A.C. */}
-        <div className="relative z-10 flex items-center gap-3.5">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-600/30">
-            <Building2 className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <p className="text-xl font-bold tracking-tight text-white">TechAsset</p>
-            <p className="text-xs font-medium text-slate-300">Innovatech Solutions S.A.C.</p>
-          </div>
+        {/* Degradado direccional izquierda → derecha y degradado inferior para garantizar contraste WCAG */}
+        <div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#040B1A]/90 via-[#040B1A]/55 to-transparent"
+          aria-hidden="true"
+        />
+        <div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#040B1A]/85 via-transparent to-transparent"
+          aria-hidden="true"
+        />
+        <svg
+          viewBox="0 0 100 1000"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 -right-px h-full w-12 lg:w-16"
+        >
+          <path
+            className="fill-sky-300/25 dark:fill-sky-500/15"
+            d="M100,0 L60,0 C16,280 84,680 28,1000 L100,1000 Z"
+          />
+          <path
+            className="fill-[#F4F8FD] dark:fill-slate-950"
+            d="M100,0 L72,0 C30,280 96,680 42,1000 L100,1000 Z"
+          />
+        </svg>
+
+        {/* Encabezado del panel de marca: Logotipo oficial */}
+        <div className="relative z-10 flex items-center">
+          <img
+            src={logoOficial}
+            alt="TechAsset - Innovatech Solutions S.A.C."
+            className="h-20 lg:h-24 w-auto object-contain"
+          />
         </div>
 
         {/* Titular y párrafo descriptivo — alineados verticalmente al centro con mayor jerarquía y espaciado */}
@@ -95,7 +108,7 @@ export function LoginPage({ onVolverLanding }: LoginPageProps) {
           <h1 className="text-4xl xl:text-5xl leading-[1.15] font-extrabold tracking-tight text-white drop-shadow-sm">
             Control inteligente de activos tecnológicos.
           </h1>
-          <p className="mt-6 text-base xl:text-lg leading-relaxed text-slate-200 font-normal">
+          <p className="mt-6 text-base xl:text-lg leading-relaxed text-slate-200 font-normal drop-shadow-sm">
             Plataforma institucional para el registro, asignación, devolución y seguimiento de
             equipamiento informático con trazabilidad patrimonial y disponibilidad en tiempo real.
           </p>
@@ -103,35 +116,62 @@ export function LoginPage({ onVolverLanding }: LoginPageProps) {
 
         {/* Pie con el copyright abajo */}
         <div className="relative z-10">
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-300">
             Innovatech Solutions S.A.C. © 2026 · Sistema Institucional de Gestión Patrimonial
           </p>
         </div>
       </aside>
 
       {/* Panel derecho del formulario — 40% en pantallas grandes (lg:col-span-2) */}
-      <main className="col-span-1 lg:col-span-2 flex min-h-screen items-center justify-center p-6 sm:p-8 xl:p-12 bg-white dark:bg-slate-950">
-        <div className="w-full max-w-[420px] my-auto flex flex-col justify-center">
+      <main className="relative overflow-hidden col-span-1 lg:col-span-2 flex min-h-screen items-center justify-center bg-gradient-to-b from-sky-50 via-slate-50 to-sky-50/70 p-6 sm:p-8 xl:p-12 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
+        <svg
+          viewBox="0 0 1440 120"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-32 w-full text-sky-100/85 dark:text-sky-950/35"
+        >
+          <path
+            fill="currentColor"
+            d="M0,0 L1440,0 L1440,48 C1140,104 720,16 360,64 C180,88 80,68 0,44 Z"
+          />
+        </svg>
+        <svg
+          viewBox="0 0 1440 120"
+          preserveAspectRatio="none"
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-36 w-full text-sky-100/90 dark:text-blue-950/35"
+        >
+          <path
+            fill="currentColor"
+            d="M0,120 L1440,120 L1440,68 C1140,12 720,100 360,52 C180,28 80,48 0,72 Z"
+          />
+        </svg>
+
+        <Card className="relative z-10 w-full max-w-[440px] shadow-lg" bodyClassName="p-6 sm:p-8">
           <div>
             {onVolverLanding && (
-              <div className="mb-4">
+              <div className="mb-5">
                 <button
                   type="button"
                   onClick={onVolverLanding}
-                  className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-blue-600 underline-offset-4 transition-colors hover:text-blue-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-sm text-sm font-medium text-blue-600 underline-offset-4 transition-colors hover:text-blue-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
                 >
-                  <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+                  <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                   <span>Volver a la presentación</span>
                 </button>
               </div>
             )}
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-300 w-fit">
-              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" /> Acceso seguro con JWT
-            </span>
-            <h2 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+            <div className="mb-5 flex items-center justify-center rounded-xl border border-slate-800/80 bg-[#0B1120] px-6 py-3">
+              <img
+                src={logoOficial}
+                alt="TechAsset - Innovatech Solutions S.A.C."
+                className="h-11 sm:h-12 w-auto object-contain"
+              />
+            </div>
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               Iniciar sesión
             </h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-400">
               Ingrese sus credenciales institucionales para acceder a la plataforma.
             </p>
           </div>
@@ -142,13 +182,13 @@ export function LoginPage({ onVolverLanding }: LoginPageProps) {
             className="mt-6 space-y-4"
             aria-label="Formulario de inicio de sesión"
           >
-            {errorServidor && (
+            {alerta && (
               <div
                 role="alert"
-                className="flex items-start gap-2.5 rounded-lg border border-rose-200 bg-rose-50 p-3 text-xs leading-relaxed text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300"
+                className="flex items-start gap-2.5 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm leading-relaxed text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300"
               >
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-rose-600 dark:text-rose-400" />
-                <span>{errorServidor}</span>
+                <span>{alerta}</span>
               </div>
             )}
 
@@ -164,7 +204,7 @@ export function LoginPage({ onVolverLanding }: LoginPageProps) {
                 autoFocus
                 autoComplete="username"
                 placeholder="usuario@innovatech.pe"
-                prefixIcon={<Mail className="h-4 w-4" />}
+                prefixIcon={<Mail className="h-4 w-4" aria-hidden="true" />}
                 hasError={Boolean(errors.correo)}
                 {...register('correo')}
               />
@@ -181,18 +221,22 @@ export function LoginPage({ onVolverLanding }: LoginPageProps) {
                 type={mostrarPassword ? 'text' : 'password'}
                 autoComplete="current-password"
                 placeholder="••••••••"
-                prefixIcon={<KeyRound className="h-4 w-4" />}
+                prefixIcon={<KeyRound className="h-4 w-4" aria-hidden="true" />}
                 hasError={Boolean(errors.password)}
                 suffixElement={
                   <button
                     type="button"
-                    tabIndex={-1}
                     onClick={() => setMostrarPassword((prev) => !prev)}
-                    className="cursor-pointer p-1 text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-200"
-                    aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
-                    title={mostrarPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                    className="cursor-pointer rounded p-1 text-slate-500 transition-colors hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:text-slate-400 dark:hover:text-slate-200"
+                    aria-label={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    title={mostrarPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    aria-pressed={mostrarPassword}
                   >
-                    {mostrarPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {mostrarPassword ? (
+                      <EyeOff className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <Eye className="h-4 w-4" aria-hidden="true" />
+                    )}
                   </button>
                 }
                 {...register('password')}
@@ -205,17 +249,29 @@ export function LoginPage({ onVolverLanding }: LoginPageProps) {
                 fullWidth
                 size="lg"
                 loading={isSubmitting}
-                leftIcon={<LogIn className="h-4 w-4" />}
+                leftIcon={<LogIn className="h-4 w-4" aria-hidden="true" />}
               >
-                Ingresar al sistema
+                Iniciar sesión
               </Button>
             </div>
           </form>
 
-          <p className="mt-8 text-center text-xs text-slate-400 dark:text-slate-500">
+          {onRecuperarContrasena && (
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={onRecuperarContrasena}
+                className="inline-flex cursor-pointer items-center rounded-sm text-sm font-medium text-blue-600 underline-offset-4 transition-colors hover:text-blue-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                ¿Olvidó su contraseña?
+              </button>
+            </div>
+          )}
+
+          <p className="mt-5 text-center text-sm text-slate-600 dark:text-slate-400">
             ¿Problemas para ingresar? Contacte al Administrador.
           </p>
-        </div>
+        </Card>
       </main>
     </div>
   );

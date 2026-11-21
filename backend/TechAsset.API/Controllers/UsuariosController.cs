@@ -22,17 +22,22 @@ public class UsuariosController : ApiControllerBase
         _actualizarValidator = actualizarValidator;
     }
 
-    [HttpGet, Authorize(Roles = $"{Roles.Administrador},{Roles.ResponsableTecnologia}")]
+    [HttpGet, Authorize(Roles = Roles.Administrador)]
     public async Task<ActionResult<IReadOnlyList<UsuarioDto>>> Listar(
         [FromQuery] string? busqueda, [FromQuery] string? area, [FromQuery] string? rol, [FromQuery] bool? estado, CancellationToken ct)
         => Ok(await _usuarios.ListarAsync(busqueda, area, rol, estado, ct));
+
+    /// <summary>Consulta mínima de usuarios habilitados (id, nombre y área) para el formulario de préstamo.</summary>
+    [HttpGet("colaboradores"), Authorize(Roles = $"{Roles.Administrador},{Roles.ResponsableTecnologia}")]
+    public async Task<ActionResult<IReadOnlyList<UsuarioMinimoDto>>> Colaboradores(CancellationToken ct)
+        => Ok(await _usuarios.ListarHabilitadosMinimoAsync(ct));
 
     /// <summary>Responsables de Tecnología activos (para el formulario de préstamo de cualquier rol).</summary>
     [HttpGet("responsables")]
     public async Task<ActionResult<IReadOnlyList<UsuarioDto>>> Responsables(CancellationToken ct)
         => Ok(await _usuarios.ListarAsync(null, null, Roles.ResponsableTecnologia, true, ct));
 
-    [HttpGet("{id:guid}"), Authorize(Roles = $"{Roles.Administrador},{Roles.ResponsableTecnologia}")]
+    [HttpGet("{id:guid}"), Authorize(Roles = Roles.Administrador)]
     public async Task<ActionResult<UsuarioDto>> Obtener(Guid id, CancellationToken ct)
         => Ok(await _usuarios.ObtenerPorIdAsync(id, ct));
 

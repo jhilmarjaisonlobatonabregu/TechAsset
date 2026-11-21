@@ -94,18 +94,11 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             >
               <div className="mt-0.5 shrink-0">{current.icon}</div>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    {t.title}
-                  </p>
-                  {t.codigoRegla && (
-                    <span className="rounded bg-rose-100 px-1.5 py-0.5 font-mono text-[10px] font-bold text-rose-700 dark:bg-rose-950 dark:text-rose-300">
-                      {t.codigoRegla}
-                    </span>
-                  )}
-                </div>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  {t.title}
+                </p>
                 {t.description && (
-                  <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                  <p className="mt-1 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
                     {t.description}
                   </p>
                 )}
@@ -113,7 +106,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               <button
                 type="button"
                 onClick={() => dismissToast(t.id)}
-                className="cursor-pointer rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                className="cursor-pointer rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
                 aria-label="Cerrar notificación"
               >
                 <X className="h-4 w-4" />

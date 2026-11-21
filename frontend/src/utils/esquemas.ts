@@ -22,7 +22,7 @@ export const crearUsuarioSchema = (esEdicion: boolean) =>
       .trim()
       .min(1, 'El correo es obligatorio.')
       .max(150, 'Máximo 150 caracteres.')
-      .email('Formato de correo no válido (RN-08: debe ser único).'),
+      .email('Ingrese un correo institucional válido.'),
     area: z.string().trim().min(1, 'Seleccione el área del colaborador.').max(100),
     rol: z.enum(ROLES_USUARIO as unknown as [string, ...string[]], { message: 'Seleccione un rol.' }),
     password: z
@@ -38,7 +38,7 @@ export const equipoSchema = z.object({
     .trim()
     .min(3, 'El código patrimonial es obligatorio (mínimo 3 caracteres).')
     .max(50, 'Máximo 50 caracteres.')
-    .regex(/^[A-Za-z0-9\-_.]+$/, 'Use solo letras, números y guiones (RN-07: debe ser único).'),
+    .regex(/^[A-Za-z0-9\-_.]+$/, 'Use solo letras, números y guiones.'),
   nombre: z.string().trim().min(3, 'El nombre es obligatorio (mínimo 3 caracteres).').max(100, 'Máximo 100 caracteres.'),
   categoria: z.enum(CATEGORIAS_EQUIPO as unknown as [string, ...string[]], { message: 'Seleccione una categoría.' }),
   marca: z.string().trim().min(2, 'La marca es obligatoria.').max(50, 'Máximo 50 caracteres.'),
@@ -58,7 +58,7 @@ export const crearPrestamoSchema = (esGestion: boolean) =>
       equipoId: z.string().min(1, 'Seleccione el equipo a prestar.'),
       usuarioId: z.string().min(1, 'Seleccione el colaborador receptor.'),
       responsableId: esGestion
-        ? z.string().min(1, 'RN-05: todo préstamo debe registrar un responsable.')
+        ? z.string().min(1, 'Todo préstamo debe registrar un responsable.')
         : z.string(),
       fechaPrestamo: z.string().min(1, 'La fecha de préstamo es obligatoria.'),
       fechaDevolucion: z.string().min(1, 'La fecha de devolución es obligatoria.'),
@@ -66,7 +66,7 @@ export const crearPrestamoSchema = (esGestion: boolean) =>
     })
     .refine((v) => !v.fechaPrestamo || !v.fechaDevolucion || v.fechaDevolucion > v.fechaPrestamo, {
       path: ['fechaDevolucion'],
-      message: 'RN-04: la fecha de devolución debe ser posterior a la fecha de préstamo.',
+      message: 'La fecha de devolución debe ser posterior a la fecha de préstamo.',
     });
 
 export const prestamoSchema = crearPrestamoSchema(true);
@@ -74,7 +74,7 @@ export type PrestamoFormValues = z.infer<typeof prestamoSchema>;
 
 export const devolucionSchema = (fechaPrestamo: string) =>
   z.object({
-    observacion: z.string().trim().min(5, 'RN-10: toda devolución exige observaciones (mínimo 5 caracteres).').max(500, 'Máximo 500 caracteres.'),
+    observacion: z.string().trim().min(5, 'Toda devolución requiere observaciones (mínimo 5 caracteres).').max(500, 'Máximo 500 caracteres.'),
     fechaDevolucionReal: z
       .string()
       .min(1, 'La fecha real de devolución es obligatoria.')

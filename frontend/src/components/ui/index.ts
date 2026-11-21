@@ -5,6 +5,7 @@ export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
 export { DataTable, type DataTableColumn, type DataTableProps } from './DataTable';
 export { DatePicker, type DatePickerProps } from './DatePicker';
 export { EmptyState, type EmptyStateProps } from './EmptyState';
+export { ErrorState, type ErrorStateProps } from './ErrorState';
 export { FormField, type FormFieldProps } from './FormField';
 export { Input, type InputProps } from './Input';
 export { Modal, type ModalProps, type ModalSize } from './Modal';

@@ -76,6 +76,12 @@ export interface DeshabilitarUsuarioPayload {
   motivo?: string;
 }
 
+export interface UsuarioMinimoDto {
+  id: string;
+  nombreCompleto: string;
+  area: string;
+}
+
 export interface EquipoDto {
   id: string;
   codigoPatrimonial: string;

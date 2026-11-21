@@ -9,8 +9,8 @@ const ETIQUETAS_TIPO_MOVIMIENTO: Record<string, string> = {
   CambioEstado: 'Cambio de estado',
   Mantenimiento: 'Cambio de estado',
   Reactivacion: 'Cambio de estado',
-  BajaLogica: 'Baja lógica',
-  Baja: 'Baja lógica',
+  BajaLogica: 'Baja de equipo',
+  Baja: 'Baja de equipo',
 };
 
 export function formatTipoMovimiento(tipo?: string | null): string {

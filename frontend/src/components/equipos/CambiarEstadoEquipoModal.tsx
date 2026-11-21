@@ -63,10 +63,10 @@ export function CambiarEstadoEquipoModal({
       open={equipo !== null}
       onClose={onClose}
       title="Actualizar estado del equipo"
-      subtitle={equipo ? `${equipo.codigoPatrimonial} — ${equipo.nombre} (RF-08)` : undefined}
+      subtitle={equipo ? `${equipo.codigoPatrimonial} — ${equipo.nombre}` : undefined}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="outline" type="button" onClick={onClose}>
             Cancelar
           </Button>
           <Button type="submit" form="form-estado" loading={isSubmitting}>

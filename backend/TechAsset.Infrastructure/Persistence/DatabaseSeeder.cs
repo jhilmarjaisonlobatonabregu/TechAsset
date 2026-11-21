@@ -20,6 +20,9 @@ public static class DatabaseSeeder
         };
     }
 
+    private static DateTime FechaUtc(DateOnly fecha, int hora, int minuto = 0)
+        => fecha.ToDateTime(new TimeOnly(hora, minuto), DateTimeKind.Utc);
+
     public static async Task SeedAsync(TechAssetDbContext db, CancellationToken ct = default)
     {
         await db.Database.EnsureCreatedAsync(ct);
@@ -29,12 +32,13 @@ public static class DatabaseSeeder
             return;
         }
 
-        var fechaBase = new DateTime(2026, 1, 10, 9, 0, 0, DateTimeKind.Utc);
+        var hoy = DateOnly.FromDateTime(DateTime.Today);
+        var fechaBase = FechaUtc(hoy.AddDays(-90), 9);
 
         var usuarios = CrearUsuarios(fechaBase);
         var equipos = CrearEquipos(fechaBase);
-        var prestamos = CrearPrestamos(usuarios, equipos, fechaBase);
-        var movimientos = CrearMovimientos(usuarios, equipos, prestamos, fechaBase);
+        var prestamos = CrearPrestamos(usuarios, equipos, hoy);
+        var movimientos = CrearMovimientos(usuarios, equipos, prestamos, fechaBase, hoy);
 
         db.Usuarios.AddRange(usuarios.Todos);
         db.Equipos.AddRange(equipos);
@@ -219,18 +223,18 @@ public static class DatabaseSeeder
         => equipos.First(e => e.CodigoPatrimonial == codigoPatrimonial);
 
     // 3. Préstamos (20 préstamos: 12 Devueltos, 6 Activos y 2 Pendientes)
-    // Desarrollo de Software tendrá 7 préstamos para liderar claramente el indicador AreaConMayorUso
-    private static List<Prestamo> CrearPrestamos(UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, DateTime fechaBase)
+    // Desarrollo de Software tendrá 8 préstamos para liderar claramente el indicador AreaConMayorUso
+    private static List<Prestamo> CrearPrestamos(UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, DateOnly hoy)
     {
         var prestamos = new List<Prestamo>();
-        prestamos.AddRange(CrearPrestamosDevueltos(usuarios, equipos, fechaBase));
-        prestamos.AddRange(CrearPrestamosActivos(usuarios, equipos, fechaBase));
-        prestamos.AddRange(CrearSolicitudesPendientes(usuarios, equipos, fechaBase));
+        prestamos.AddRange(CrearPrestamosDevueltos(usuarios, equipos, hoy));
+        prestamos.AddRange(CrearPrestamosActivos(usuarios, equipos, hoy));
+        prestamos.AddRange(CrearSolicitudesPendientes(usuarios, equipos, hoy));
         return prestamos;
     }
 
-    // --- 12 Préstamos Devueltos ---
-    private static List<Prestamo> CrearPrestamosDevueltos(UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, DateTime fechaBase)
+    // --- 12 Préstamos Devueltos (últimos 3 meses) ---
+    private static List<Prestamo> CrearPrestamosDevueltos(UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, DateOnly hoy)
     {
         var (uAdmin, uSoporte1, uSoporte2, uColabDev1, uColabDev2, uColabData, uColabQa, uColabFin, uColabInactivo) = usuarios;
         var eLap1 = BuscarEquipo(equipos, "INV-LAP-001");
@@ -252,13 +256,13 @@ public static class DatabaseSeeder
                 EquipoId = eLap1.Id,
                 UsuarioId = uColabDev1.Id,
                 ResponsableId = uSoporte1.Id,
-                FechaPrestamo = new DateOnly(2026, 1, 15),
-                FechaDevolucion = new DateOnly(2026, 1, 30),
-                FechaDevolucionReal = new DateOnly(2026, 1, 29),
+                FechaPrestamo = hoy.AddDays(-80),
+                FechaDevolucion = hoy.AddDays(-65),
+                FechaDevolucionReal = hoy.AddDays(-66),
                 Observacion = "Asignación para sprint de microservicios de facturación.",
                 ObservacionDevolucion = "Equipo devuelto con cargador original USB-C de 65W sin daños.",
                 EstadoPrestamo = EstadosPrestamo.Devuelto,
-                FechaRegistro = fechaBase.AddDays(5)
+                FechaRegistro = FechaUtc(hoy.AddDays(-80), 9)
             },
             new()
             {
@@ -266,13 +270,13 @@ public static class DatabaseSeeder
                 EquipoId = eLap1.Id,
                 UsuarioId = uColabDev2.Id,
                 ResponsableId = uSoporte2.Id,
-                FechaPrestamo = new DateOnly(2026, 2, 2),
-                FechaDevolucion = new DateOnly(2026, 2, 18),
-                FechaDevolucionReal = new DateOnly(2026, 2, 17),
+                FechaPrestamo = hoy.AddDays(-58),
+                FechaDevolucion = hoy.AddDays(-42),
+                FechaDevolucionReal = hoy.AddDays(-43),
                 Observacion = "Despliegue de entorno Docker local y pruebas de integración.",
                 ObservacionDevolucion = "Recepción conforme; se realizó limpieza preventiva de teclado.",
                 EstadoPrestamo = EstadosPrestamo.Devuelto,
-                FechaRegistro = fechaBase.AddDays(23)
+                FechaRegistro = FechaUtc(hoy.AddDays(-58), 9)
             },
             new()
             {
@@ -280,13 +284,13 @@ public static class DatabaseSeeder
                 EquipoId = eLap2.Id,
                 UsuarioId = uColabDev2.Id,
                 ResponsableId = uSoporte1.Id,
-                FechaPrestamo = new DateOnly(2026, 1, 18),
-                FechaDevolucion = new DateOnly(2026, 2, 2),
-                FechaDevolucionReal = new DateOnly(2026, 2, 1),
+                FechaPrestamo = hoy.AddDays(-76),
+                FechaDevolucion = hoy.AddDays(-60),
+                FechaDevolucionReal = hoy.AddDays(-61),
                 Observacion = "Compilación de aplicaciones móviles iOS y Android corporativas.",
                 ObservacionDevolucion = "Devuelto en perfecto estado estético y operativo con adaptador MagSafe 3.",
                 EstadoPrestamo = EstadosPrestamo.Devuelto,
-                FechaRegistro = fechaBase.AddDays(8)
+                FechaRegistro = FechaUtc(hoy.AddDays(-76), 9)
             },
             new()
             {
@@ -294,13 +298,13 @@ public static class DatabaseSeeder
                 EquipoId = eLap3.Id,
                 UsuarioId = uColabDev1.Id,
                 ResponsableId = uSoporte1.Id,
-                FechaPrestamo = new DateOnly(2026, 2, 5),
-                FechaDevolucion = new DateOnly(2026, 2, 20),
-                FechaDevolucionReal = new DateOnly(2026, 2, 19),
+                FechaPrestamo = hoy.AddDays(-55),
+                FechaDevolucion = hoy.AddDays(-40),
+                FechaDevolucionReal = hoy.AddDays(-41),
                 Observacion = "Pruebas de rendimiento en cliente bancario.",
                 ObservacionDevolucion = "Devolución verificada por soporte técnico sin incidencias.",
                 EstadoPrestamo = EstadosPrestamo.Devuelto,
-                FechaRegistro = fechaBase.AddDays(26)
+                FechaRegistro = FechaUtc(hoy.AddDays(-55), 9)
             },
             new()
             {
@@ -308,13 +312,13 @@ public static class DatabaseSeeder
                 EquipoId = eLap3.Id,
                 UsuarioId = uColabData.Id,
                 ResponsableId = uSoporte2.Id,
-                FechaPrestamo = new DateOnly(2026, 2, 22),
-                FechaDevolucion = new DateOnly(2026, 3, 5),
-                FechaDevolucionReal = new DateOnly(2026, 3, 4),
+                FechaPrestamo = hoy.AddDays(-35),
+                FechaDevolucion = hoy.AddDays(-22),
+                FechaDevolucionReal = hoy.AddDays(-23),
                 Observacion = "Entrenamiento de modelo predictivo de rotación de clientes.",
                 ObservacionDevolucion = "Equipo operativo, disco formateado según protocolo de seguridad.",
                 EstadoPrestamo = EstadosPrestamo.Devuelto,
-                FechaRegistro = fechaBase.AddDays(43)
+                FechaRegistro = FechaUtc(hoy.AddDays(-35), 9)
             },
             new()
             {
@@ -322,13 +326,13 @@ public static class DatabaseSeeder
                 EquipoId = eMon1.Id,
                 UsuarioId = uColabDev1.Id,
                 ResponsableId = uSoporte1.Id,
-                FechaPrestamo = new DateOnly(2026, 1, 20),
-                FechaDevolucion = new DateOnly(2026, 2, 10),
-                FechaDevolucionReal = new DateOnly(2026, 2, 9),
+                FechaPrestamo = hoy.AddDays(-72),
+                FechaDevolucion = hoy.AddDays(-52),
+                FechaDevolucionReal = hoy.AddDays(-53),
                 Observacion = "Segundo monitor para estación de arquitectura de software.",
                 ObservacionDevolucion = "Panel IPS sin píxeles muertos, incluye cable USB-C y DisplayPort.",
                 EstadoPrestamo = EstadosPrestamo.Devuelto,
-                FechaRegistro = fechaBase.AddDays(10)
+                FechaRegistro = FechaUtc(hoy.AddDays(-72), 9)
             },
             new()
             {
@@ -336,13 +340,13 @@ public static class DatabaseSeeder
                 EquipoId = eTab1.Id,
                 UsuarioId = uColabQa.Id,
                 ResponsableId = uSoporte2.Id,
-                FechaPrestamo = new DateOnly(2026, 1, 25),
-                FechaDevolucion = new DateOnly(2026, 2, 8),
-                FechaDevolucionReal = new DateOnly(2026, 2, 7),
+                FechaPrestamo = hoy.AddDays(-68),
+                FechaDevolucion = hoy.AddDays(-54),
+                FechaDevolucionReal = hoy.AddDays(-55),
                 Observacion = "Validación de diseño responsivo y accesibilidad en Safari iPadOS.",
                 ObservacionDevolucion = "Pantalla impecable y Apple Pencil con carga al 100%.",
                 EstadoPrestamo = EstadosPrestamo.Devuelto,
-                FechaRegistro = fechaBase.AddDays(15)
+                FechaRegistro = FechaUtc(hoy.AddDays(-68), 9)
             },
             new()
             {
@@ -350,13 +354,13 @@ public static class DatabaseSeeder
                 EquipoId = eProy1.Id,
                 UsuarioId = uColabFin.Id,
                 ResponsableId = uSoporte1.Id,
-                FechaPrestamo = new DateOnly(2026, 2, 10),
-                FechaDevolucion = new DateOnly(2026, 2, 14),
-                FechaDevolucionReal = new DateOnly(2026, 2, 13),
+                FechaPrestamo = hoy.AddDays(-48),
+                FechaDevolucion = hoy.AddDays(-44),
+                FechaDevolucionReal = hoy.AddDays(-45),
                 Observacion = "Sustentación de presupuesto trimestral ante directorio.",
                 ObservacionDevolucion = "Proyector devuelto con control remoto, cable HDMI y maletín acolchado.",
                 EstadoPrestamo = EstadosPrestamo.Devuelto,
-                FechaRegistro = fechaBase.AddDays(31)
+                FechaRegistro = FechaUtc(hoy.AddDays(-48), 9)
             },
             new()
             {
@@ -364,13 +368,13 @@ public static class DatabaseSeeder
                 EquipoId = eLap5.Id,
                 UsuarioId = uColabData.Id,
                 ResponsableId = uSoporte2.Id,
-                FechaPrestamo = new DateOnly(2026, 2, 12),
-                FechaDevolucion = new DateOnly(2026, 2, 26),
-                FechaDevolucionReal = new DateOnly(2026, 2, 25),
+                FechaPrestamo = hoy.AddDays(-45),
+                FechaDevolucion = hoy.AddDays(-30),
+                FechaDevolucionReal = hoy.AddDays(-31),
                 Observacion = "Procesamiento de pipeline ETL y visualización analítica.",
                 ObservacionDevolucion = "Se reporta calentamiento en ventilador derecho; pasa a Mantenimiento preventivo.",
                 EstadoPrestamo = EstadosPrestamo.Devuelto,
-                FechaRegistro = fechaBase.AddDays(33)
+                FechaRegistro = FechaUtc(hoy.AddDays(-45), 9)
             },
             new()
             {
@@ -378,13 +382,13 @@ public static class DatabaseSeeder
                 EquipoId = ePc3.Id,
                 UsuarioId = uColabInactivo.Id,
                 ResponsableId = uAdmin.Id,
-                FechaPrestamo = new DateOnly(2026, 1, 12),
-                FechaDevolucion = new DateOnly(2026, 1, 28),
-                FechaDevolucionReal = new DateOnly(2026, 1, 27),
+                FechaPrestamo = hoy.AddDays(-82),
+                FechaDevolucion = hoy.AddDays(-66),
+                FechaDevolucionReal = hoy.AddDays(-67),
                 Observacion = "Estación temporal de coordinación de operaciones.",
                 ObservacionDevolucion = "Devuelto al finalizar contrato; equipo programado para baja por obsolescencia.",
                 EstadoPrestamo = EstadosPrestamo.Devuelto,
-                FechaRegistro = fechaBase.AddDays(2)
+                FechaRegistro = FechaUtc(hoy.AddDays(-82), 9)
             },
             new()
             {
@@ -392,13 +396,13 @@ public static class DatabaseSeeder
                 EquipoId = eLap4.Id,
                 UsuarioId = uColabQa.Id,
                 ResponsableId = uSoporte1.Id,
-                FechaPrestamo = new DateOnly(2026, 2, 15),
-                FechaDevolucion = new DateOnly(2026, 3, 1),
-                FechaDevolucionReal = new DateOnly(2026, 2, 28),
+                FechaPrestamo = hoy.AddDays(-38),
+                FechaDevolucion = hoy.AddDays(-24),
+                FechaDevolucionReal = hoy.AddDays(-25),
                 Observacion = "Ejecución de suite automatizada Playwright y pruebas E2E.",
                 ObservacionDevolucion = "Equipo verificado y reincorporado al stock disponible.",
                 EstadoPrestamo = EstadosPrestamo.Devuelto,
-                FechaRegistro = fechaBase.AddDays(36)
+                FechaRegistro = FechaUtc(hoy.AddDays(-38), 9)
             },
             new()
             {
@@ -406,19 +410,19 @@ public static class DatabaseSeeder
                 EquipoId = eTab3.Id,
                 UsuarioId = uColabFin.Id,
                 ResponsableId = uSoporte2.Id,
-                FechaPrestamo = new DateOnly(2026, 1, 14),
-                FechaDevolucion = new DateOnly(2026, 1, 24),
-                FechaDevolucionReal = new DateOnly(2026, 1, 23),
+                FechaPrestamo = hoy.AddDays(-78),
+                FechaDevolucion = hoy.AddDays(-68),
+                FechaDevolucionReal = hoy.AddDays(-69),
                 Observacion = "Toma de inventario físico de activos fijos en sede central.",
                 ObservacionDevolucion = "Equipo devuelto; batería degradada al 40%, se procede a baja lógica.",
                 EstadoPrestamo = EstadosPrestamo.Devuelto,
-                FechaRegistro = fechaBase.AddDays(4)
+                FechaRegistro = FechaUtc(hoy.AddDays(-78), 9)
             },
         };
     }
 
-    // --- 6 Préstamos Activos (coinciden con los 6 equipos en Estado = Prestado) ---
-    private static List<Prestamo> CrearPrestamosActivos(UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, DateTime fechaBase)
+    // --- 6 Préstamos Activos (4 al día y 2 vencidos; coinciden con los 6 equipos en Estado = Prestado) ---
+    private static List<Prestamo> CrearPrestamosActivos(UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, DateOnly hoy)
     {
         var (uAdmin, uSoporte1, uSoporte2, uColabDev1, uColabDev2, uColabData, uColabQa, uColabFin, uColabInactivo) = usuarios;
         var eLap1 = BuscarEquipo(equipos, "INV-LAP-001");
@@ -436,11 +440,11 @@ public static class DatabaseSeeder
                 EquipoId = eLap1.Id,
                 UsuarioId = uColabDev1.Id,
                 ResponsableId = uSoporte1.Id,
-                FechaPrestamo = new DateOnly(2026, 3, 2),
-                FechaDevolucion = new DateOnly(2026, 3, 30),
+                FechaPrestamo = hoy.AddDays(-5),
+                FechaDevolucion = hoy.AddDays(10),
                 Observacion = "Desarrollo del portal corporativo de gestión de activos TechAsset.",
                 EstadoPrestamo = EstadosPrestamo.Activo,
-                FechaRegistro = fechaBase.AddDays(51)
+                FechaRegistro = FechaUtc(hoy.AddDays(-5), 9)
             },
             new()
             {
@@ -448,11 +452,11 @@ public static class DatabaseSeeder
                 EquipoId = eLap2.Id,
                 UsuarioId = uColabDev2.Id,
                 ResponsableId = uSoporte2.Id,
-                FechaPrestamo = new DateOnly(2026, 3, 4),
-                FechaDevolucion = new DateOnly(2026, 4, 2),
+                FechaPrestamo = hoy.AddDays(-4),
+                FechaDevolucion = hoy.AddDays(12),
                 Observacion = "Integración continua y arquitectura frontend React/TypeScript.",
                 EstadoPrestamo = EstadosPrestamo.Activo,
-                FechaRegistro = fechaBase.AddDays(53)
+                FechaRegistro = FechaUtc(hoy.AddDays(-4), 9)
             },
             new()
             {
@@ -460,11 +464,11 @@ public static class DatabaseSeeder
                 EquipoId = ePc1.Id,
                 UsuarioId = uColabData.Id,
                 ResponsableId = uSoporte1.Id,
-                FechaPrestamo = new DateOnly(2026, 3, 5),
-                FechaDevolucion = new DateOnly(2026, 4, 10),
+                FechaPrestamo = hoy.AddDays(-3),
+                FechaDevolucion = hoy.AddDays(14),
                 Observacion = "Servidor local de inferencia y análisis estadístico en Ciencia de Datos.",
                 EstadoPrestamo = EstadosPrestamo.Activo,
-                FechaRegistro = fechaBase.AddDays(54)
+                FechaRegistro = FechaUtc(hoy.AddDays(-3), 9)
             },
             new()
             {
@@ -472,11 +476,11 @@ public static class DatabaseSeeder
                 EquipoId = eMon1.Id,
                 UsuarioId = uColabDev1.Id,
                 ResponsableId = uSoporte1.Id,
-                FechaPrestamo = new DateOnly(2026, 3, 3),
-                FechaDevolucion = new DateOnly(2026, 3, 30),
+                FechaPrestamo = hoy.AddDays(-18),
+                FechaDevolucion = hoy.AddDays(-3),
                 Observacion = "Monitor auxiliar 4K asignado a líder técnico de Desarrollo de Software.",
                 EstadoPrestamo = EstadosPrestamo.Activo,
-                FechaRegistro = fechaBase.AddDays(52)
+                FechaRegistro = FechaUtc(hoy.AddDays(-18), 9)
             },
             new()
             {
@@ -484,11 +488,11 @@ public static class DatabaseSeeder
                 EquipoId = eTab1.Id,
                 UsuarioId = uColabQa.Id,
                 ResponsableId = uSoporte2.Id,
-                FechaPrestamo = new DateOnly(2026, 3, 6),
-                FechaDevolucion = new DateOnly(2026, 3, 25),
+                FechaPrestamo = hoy.AddDays(-2),
+                FechaDevolucion = hoy.AddDays(6),
                 Observacion = "Certificación funcional multi-dispositivo del release 2026.1.",
                 EstadoPrestamo = EstadosPrestamo.Activo,
-                FechaRegistro = fechaBase.AddDays(55)
+                FechaRegistro = FechaUtc(hoy.AddDays(-2), 9)
             },
             new()
             {
@@ -496,17 +500,17 @@ public static class DatabaseSeeder
                 EquipoId = eRed1.Id,
                 UsuarioId = uSoporte2.Id,
                 ResponsableId = uAdmin.Id,
-                FechaPrestamo = new DateOnly(2026, 3, 1),
-                FechaDevolucion = new DateOnly(2026, 3, 28),
+                FechaPrestamo = hoy.AddDays(-20),
+                FechaDevolucion = hoy.AddDays(-5),
                 Observacion = "Segmentación de VLANs en laboratorio de contingencia de red.",
                 EstadoPrestamo = EstadosPrestamo.Activo,
-                FechaRegistro = fechaBase.AddDays(50)
+                FechaRegistro = FechaUtc(hoy.AddDays(-20), 9)
             },
         };
     }
 
     // --- 2 Solicitudes Pendientes de Aprobación (equipos permanecen en Estado = Disponible y ResponsableId = null) ---
-    private static List<Prestamo> CrearSolicitudesPendientes(UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, DateTime fechaBase)
+    private static List<Prestamo> CrearSolicitudesPendientes(UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, DateOnly hoy)
     {
         var (uAdmin, uSoporte1, uSoporte2, uColabDev1, uColabDev2, uColabData, uColabQa, uColabFin, uColabInactivo) = usuarios;
         var eLap3 = BuscarEquipo(equipos, "INV-LAP-003");
@@ -520,11 +524,11 @@ public static class DatabaseSeeder
                 EquipoId = eLap3.Id,
                 UsuarioId = uColabDev1.Id,
                 ResponsableId = null,
-                FechaPrestamo = new DateOnly(2026, 3, 12),
-                FechaDevolucion = new DateOnly(2026, 3, 26),
+                FechaPrestamo = hoy.AddDays(-1),
+                FechaDevolucion = hoy.AddDays(6),
                 Observacion = "Solicitud de laptop adicional para pruebas de carga y estrés del módulo de préstamos.",
                 EstadoPrestamo = EstadosPrestamo.Pendiente,
-                FechaRegistro = fechaBase.AddDays(56)
+                FechaRegistro = FechaUtc(hoy.AddDays(-1), 9)
             },
             new()
             {
@@ -532,23 +536,23 @@ public static class DatabaseSeeder
                 EquipoId = eLap4.Id,
                 UsuarioId = uColabQa.Id,
                 ResponsableId = null,
-                FechaPrestamo = new DateOnly(2026, 3, 13),
-                FechaDevolucion = new DateOnly(2026, 3, 27),
+                FechaPrestamo = hoy,
+                FechaDevolucion = hoy.AddDays(7),
                 Observacion = "Solicitud de equipo portátil para validación funcional en entorno de preproducción.",
                 EstadoPrestamo = EstadosPrestamo.Pendiente,
-                FechaRegistro = fechaBase.AddDays(57)
+                FechaRegistro = DateTime.SpecifyKind(hoy.ToDateTime(TimeOnly.MinValue), DateTimeKind.Local).ToUniversalTime()
             }
         };
     }
 
     // 4. Movimientos de Inventario (44 registros detallados para RF-17)
     private static List<MovimientoInventario> CrearMovimientos(
-        UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, IReadOnlyList<Prestamo> prestamos, DateTime fechaBase)
+        UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, IReadOnlyList<Prestamo> prestamos, DateTime fechaBase, DateOnly hoy)
     {
         var movimientos = new List<MovimientoInventario>();
         movimientos.AddRange(CrearMovimientosAlta(usuarios, equipos, fechaBase));
         movimientos.AddRange(CrearMovimientosPrestamosYDevoluciones(usuarios, equipos, prestamos));
-        movimientos.AddRange(CrearMovimientosMantenimientoYBaja(usuarios, equipos));
+        movimientos.AddRange(CrearMovimientosMantenimientoYBaja(usuarios, equipos, hoy));
         return movimientos;
     }
 
@@ -627,7 +631,8 @@ public static class DatabaseSeeder
     }
 
     // Movimientos adicionales de Mantenimiento y Baja Lógica
-    private static List<MovimientoInventario> CrearMovimientosMantenimientoYBaja(UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos)
+    private static List<MovimientoInventario> CrearMovimientosMantenimientoYBaja(
+        UsuariosSemilla usuarios, IReadOnlyList<Equipo> equipos, DateOnly hoy)
     {
         var (uAdmin, uSoporte1, uSoporte2) = (usuarios.Admin, usuarios.Soporte1, usuarios.Soporte2);
         var eImp2 = BuscarEquipo(equipos, "INV-IMP-002");
@@ -639,7 +644,7 @@ public static class DatabaseSeeder
         movimientos.Add(new MovimientoInventario
         {
             Id = Guid.NewGuid(),
-            Fecha = new DateTime(2026, 2, 26, 11, 30, 0, DateTimeKind.Utc),
+            Fecha = FechaUtc(hoy.AddDays(-20), 11, 30),
             TipoMovimiento = TiposMovimiento.CambioEstado,
             EquipoId = eImp2.Id,
             EstadoAnterior = EstadosEquipo.Disponible,
@@ -652,7 +657,7 @@ public static class DatabaseSeeder
         movimientos.Add(new MovimientoInventario
         {
             Id = Guid.NewGuid(),
-            Fecha = new DateTime(2026, 2, 27, 15, 0, 0, DateTimeKind.Utc),
+            Fecha = FechaUtc(hoy.AddDays(-19), 15, 0),
             TipoMovimiento = TiposMovimiento.CambioEstado,
             EquipoId = eProy2.Id,
             EstadoAnterior = EstadosEquipo.Disponible,
@@ -665,7 +670,7 @@ public static class DatabaseSeeder
         movimientos.Add(new MovimientoInventario
         {
             Id = Guid.NewGuid(),
-            Fecha = new DateTime(2026, 1, 28, 17, 15, 0, DateTimeKind.Utc),
+            Fecha = FechaUtc(hoy.AddDays(-66), 17, 15),
             TipoMovimiento = TiposMovimiento.BajaLogica,
             EquipoId = ePc3.Id,
             EstadoAnterior = EstadosEquipo.Disponible,
@@ -678,7 +683,7 @@ public static class DatabaseSeeder
         movimientos.Add(new MovimientoInventario
         {
             Id = Guid.NewGuid(),
-            Fecha = new DateTime(2026, 1, 24, 18, 0, 0, DateTimeKind.Utc),
+            Fecha = FechaUtc(hoy.AddDays(-68), 18, 0),
             TipoMovimiento = TiposMovimiento.BajaLogica,
             EquipoId = eTab3.Id,
             EstadoAnterior = EstadosEquipo.Disponible,

@@ -23,6 +23,9 @@ const modalSizeClasses: Record<ModalSize, string> = {
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+const EDITABLE_FIELD_SELECTOR =
+  'input:not([disabled]):not([readonly]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]):not([readonly])';
+
 export const Modal: React.FC<ModalProps> = ({
   open,
   onClose,
@@ -33,6 +36,7 @@ export const Modal: React.FC<ModalProps> = ({
   footer,
 }) => {
   const modalRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -44,6 +48,11 @@ export const Modal: React.FC<ModalProps> = ({
     const timer = window.setTimeout(() => {
       if (!modalRef.current) return;
       if (modalRef.current.contains(document.activeElement)) return;
+      const primerEditable = bodyRef.current?.querySelector<HTMLElement>(EDITABLE_FIELD_SELECTOR);
+      if (primerEditable) {
+        primerEditable.focus();
+        return;
+      }
       const focusables = modalRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
       if (focusables.length > 0) {
         focusables[0].focus();
@@ -118,7 +127,7 @@ export const Modal: React.FC<ModalProps> = ({
       <div
         ref={modalRef}
         tabIndex={-1}
-        className={`relative w-full rounded-2xl border border-slate-200 bg-white shadow-2xl transition-all dark:border-slate-800 dark:bg-slate-900 ${modalSizeClasses[size]}`}
+        className={`relative w-full rounded-2xl border border-slate-200 bg-white shadow-2xl transition-all focus:outline-none dark:border-slate-800 dark:bg-slate-900 ${modalSizeClasses[size]}`}
       >
         <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-4 dark:border-slate-800">
           <div>
@@ -129,20 +138,20 @@ export const Modal: React.FC<ModalProps> = ({
               {title}
             </h2>
             {subtitle && (
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>
+              <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{subtitle}</p>
             )}
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Cerrar ventana modal"
-            className="cursor-pointer rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            className="cursor-pointer rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="max-h-[75vh] overflow-y-auto px-6 py-5">{children}</div>
+        <div ref={bodyRef} className="max-h-[75vh] overflow-y-auto px-6 py-5">{children}</div>
 
         {footer && (
           <div className="flex flex-wrap items-center justify-end gap-2.5 border-t border-slate-100 bg-slate-50/70 px-6 py-3.5 rounded-b-2xl dark:border-slate-800 dark:bg-slate-900/60">

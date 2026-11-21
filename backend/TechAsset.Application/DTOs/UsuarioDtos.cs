@@ -42,3 +42,10 @@ public class CambiarEstadoUsuarioDto
     public bool? Estado { get; set; }
     public string? Motivo { get; set; }
 }
+
+public class UsuarioMinimoDto
+{
+    public Guid Id { get; set; }
+    public string NombreCompleto { get; set; } = string.Empty;
+    public string Area { get; set; } = string.Empty;
+}

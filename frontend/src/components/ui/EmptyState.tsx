@@ -23,7 +23,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         {icon ?? <Inbox className="h-6 w-6" />}
       </div>
       <h4 className="mt-4 text-sm font-semibold text-slate-900 dark:text-slate-100">{title}</h4>
-      <p className="mt-1 max-w-md text-xs text-slate-500 dark:text-slate-400">{description}</p>
+      <p className="mt-1 max-w-md text-sm text-slate-600 dark:text-slate-400">{description}</p>
       {actionLabel && onAction && (
         <div className="mt-4">
           <Button variant="primary" size="sm" onClick={onAction}>
